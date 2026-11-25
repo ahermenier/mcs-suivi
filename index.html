@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261125203055">
+<meta name="mcs-build" content="20261125220206">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261125203055') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261125220206') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -107,7 +107,7 @@ input{width:100%;height:46px;border:1px solid var(--line);border-radius:10px;pad
 .hidden{display:none!important}
 @media (max-height:720px){
   .band .v{font-size:20px}.band .l,.band .c{font-size:11px}
-  .chartbox{min-height:120px}
+  .chartbox{min-height:170px}
   .step .box{font-size:10px;min-height:30px;padding:3px 4px}
   .times{font-size:11px;margin-top:6px}
   .acts button{height:38px}
@@ -155,7 +155,8 @@ input{width:100%;height:46px;border:1px solid var(--line);border-radius:10px;pad
 <script>
 const CFG = {
   apiKey: "AIzaSyD9wWBauLRixFVOsr8pLYfp-joWpVWfqts",
-  db: "https://mcs-atelier-default-rtdb.europe-west1.firebasedatabase.app"
+  db: "https://mcs-atelier-default-rtdb.europe-west1.firebasedatabase.app",
+  idt: "https://identitytoolkit.googleapis.com", sec: "https://securetoken.googleapis.com"
 };
 const $ = id => document.getElementById(id);
 const store = {
@@ -166,7 +167,7 @@ let idToken = null, tokenUntil = 0, timer = null, machines = {}, pending = {};
 
 // ---------- connexion (REST Firebase Auth) ----------
 async function signIn(email, password){
-  const r = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + CFG.apiKey, {
+  const r = await fetch(CFG.idt + "/v1/accounts:signInWithPassword?key=" + CFG.apiKey, {
     method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify({ email, password, returnSecureToken:true })
   });
@@ -179,7 +180,7 @@ async function ensureToken(){
   if (idToken && Date.now() < tokenUntil) return;
   const rt = store.get("mcs_refresh");
   if (!rt) throw new Error("NOLOGIN");
-  const r = await fetch("https://securetoken.googleapis.com/v1/token?key=" + CFG.apiKey, {
+  const r = await fetch(CFG.sec + "/v1/token?key=" + CFG.apiKey, {
     method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"},
     body: "grant_type=refresh_token&refresh_token=" + encodeURIComponent(rt)
   });
@@ -323,9 +324,20 @@ function render(){
   $("stale").classList.toggle("hidden", !showStale);
   if (showStale) $("stale").textContent = "MCS Studio n'envoie plus rien depuis " + ago(now - newestReal) + " : PC éteint, MCS Studio fermé ou pas d'Internet à l'atelier. Dernières valeurs reçues ci-dessous.";
   $("list").innerHTML = card(m, now - (m.updated || 0) > 30000);
+  fitText();
   drawChart(selected, chartPts(machines[selected]));
   document.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => askAction(b.dataset.key, b.dataset.act)));
 }
+// Une ligne trop longue pour sa case (petit écran) est réduite jusqu'à tenir, au lieu d'être coupée par « … »
+function fitText(){
+  document.querySelectorAll(".step .box span:not(.sh)").forEach(x => {
+    x.style.fontSize = ""; let f = parseFloat(getComputedStyle(x).fontSize);
+    const over = () => { const r = document.createRange(); r.selectNodeContents(x); return r.getBoundingClientRect().width > x.getBoundingClientRect().width - 0.5 || x.scrollWidth > x.clientWidth; };
+    while (over() && f > 7.5) { f -= 0.5; x.style.fontSize = f + "px"; }
+  });
+}
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitText());
+addEventListener("resize", () => fitText());
 // Glisser à gauche / à droite pour changer de machine
 (() => { let x0 = null, y0 = 0;
   document.addEventListener("touchstart", e => { if (e.target.closest(".modal")) return; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive:true });
@@ -340,24 +352,24 @@ function render(){
 })();
 window.addEventListener("resize", () => scheduleRender());
 // Fraîcheur des données, discrète, sur la ligne d'état : « en direct » ou « il y a 4 min »
-// Courbe = dernier graphe reçu du PC + points en direct (mesures reçues toutes les 5 s) ajoutés au bout :
-// la courbe avance en direct sans attendre le prochain envoi du graphe complet.
+// Courbe = graphe du cycle en cours reçu du PC ({cycle, pts}) + mesures en direct (toutes les 5 s) ajoutées au bout.
+// Un graphe d'un autre cycle n'est jamais affiché : le n° de cycle doit être celui de l'état.
 const live = {};
 function chartPts(m){
-  if (!m) return null;
-  const k = m.key, base = hists[k] || [];
+  if (!m || !m.cycle) return null;
+  const k = m.key, hd = hists[k];
+  const base = hd && hd.cycle === m.cycle && Array.isArray(hd.pts) ? hd.pts : [];
+  const lv = live[k] && live[k].cycle === m.cycle ? live[k] : (live[k] = { cycle: m.cycle, pts: [] });
   const lastH = base.length ? base[base.length-1][0] : -1;
-  let h = m.h;
-  if (h == null && m.histAt && base.length && m.updated) h = lastH + Math.max(0, m.updated - m.histAt) / 3.6e6;
-  const L = (live[k] = (live[k] || []).filter(p => p[0] > lastH));
-  if ((m.running || m.paused) && h != null && m.v != null && h > lastH && (!L.length || h > L[L.length-1][0] + 1e-6))
-    L.push([h, m.v, m.a, m.t, m.stepNo != null ? m.stepNo : (base.length ? base[base.length-1][4] : 0)]);
-  const all = base.concat(L);
+  lv.pts = lv.pts.filter(p => p[0] > lastH);
+  if ((m.running || m.paused) && m.h != null && m.v != null && m.h > lastH && (!lv.pts.length || m.h > lv.pts[lv.pts.length-1][0] + 1e-7))
+    lv.pts.push([m.h, m.v, m.a, m.t, m.stepNo || 0]);
+  const all = base.concat(lv.pts);
+  if (!hd || hd.cycle !== m.cycle) needHist();
   return all.length ? all : null;
 }
-function hoursOf(t){ const r = /^(\d+)h(\d\d)$/.exec(t || ""); return r ? +r[1] + r[2]/60 : null; }
-let staleTimer = null;
-function staleHist(){ if (!staleTimer) staleTimer = setTimeout(() => { staleTimer = null; loadHist(); }, 5000); }
+let needTimer = null;
+function needHist(){ if (!needTimer) needTimer = setTimeout(() => { needTimer = null; loadHist(); }, 1500); }
 function freshTxt(m){
   const age = Date.now() - (m.updated || 0);
   if (!m.updated) return '<span class="fresh"></span>';
@@ -380,29 +392,23 @@ function card(m, stale){
     const ok = m.state === "Terminé", err = (m.state||"").includes("erreur");
     const c = ok ? "var(--ok)" : err ? "var(--danger)" : "var(--muted)";
     const b = ok ? "var(--okSoft)" : err ? "var(--dangerSoft)" : "#F3F5F8";
-    h += '<div class="res" style="border-color:'+c+';background:'+b+'"><div class="t">'+esc(m.result || m.state)+'</div><div class="s">'+esc((m.kind||"Programme")+' '+(ok?'terminé':'arrêté')+' le '+m.finished.replace(' ',' à '))+'</div></div>';
+    h += '<div class="res" style="border-color:'+c+';background:'+b+'"><div class="t">'+esc(m.result || m.state)+'</div><div class="s">'+esc(m.finishLine || ((m.kind||"Programme")+' '+(ok?'terminé':'arrêté')+' le '+m.finished.replace(' ',' à ')))+'</div></div>';
   }
   if (m.v != null) {
     h += '<div class="band"><div><div class="l">Tension</div><div class="v" style="color:var(--volt)">'+num(m.v,1)+' V</div><div class="c">'+(active?'consigne '+num(m.setV,1):'&nbsp;')+'</div></div>';
     h += '<div><div class="l">Courant</div><div class="v" style="color:var(--amp)">'+num(m.a,1)+' A</div><div class="c">'+(active?'consigne '+num(m.setA,1):'&nbsp;')+'</div></div>';
     h += '<div><div class="l">Température</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+' °C')+'</div><div class="c">'+(active?'batterie':'&nbsp;')+'</div></div></div>';
   }
-  let hh = chartPts(m);
-  // Graphe d'un autre cycle (programme relancé, graphe pas encore renvoyé par le PC) : on ne l'affiche pas
-  const elH = hoursOf(m.elapsed);
-  if (hh && hh.length && elH != null && hh[hh.length-1][0] > elH + 0.05) { hh = null; staleHist(); }
-  h += '<div class="chartbox">' + (hh && hh.length > 1 ? '<canvas id="c_'+esc(m.key)+'"></canvas>' : '<div class="empty" style="margin-top:18%">'+(active ? 'Courbe en cours de chargement…' : 'Machine au repos')+'</div>') + '</div>';
+  const hh = chartPts(m);
+  h += '<div class="chartbox">' + (hh && hh.length > 1 ? '<canvas id="c_'+esc(m.key)+'"></canvas>' : '<div class="empty" style="margin-top:18%">'+(active ? 'La courbe apparaît à la première mesure du cycle' : 'Machine au repos')+'</div>') + '</div>';
   if (m.steps && m.steps.length) {
-    // Cycle arrêté : les étapes que la courbe n'a jamais atteintes sont « non faites », même si un ancien MCS Studio les dit terminées
-    const hh2 = hh, maxStep = !active && hh2 && hh2.length ? Math.max(...hh2.map(p => p[4] || 0)) : 0;
-    h += '<div class="steps">' + m.steps.map(s0 => {
-      const s = (maxStep > 0 && s0.no > maxStep && s0.state === "done") ? Object.assign({}, s0, { state: "skip", text: "non faite" }) : s0;
+    h += '<div class="steps">' + m.steps.map(s => {
       const bgc = (s.state === "next" || s.state === "skip") ? (s.dis ? "var(--ampNext)" : "var(--voltNext)") : (s.dis ? "var(--ampCell)" : "var(--voltCell)");
       const fr = s.state === "done" ? 1 : s.state === "now" ? (s.frac||0) : 0;
       // Toujours 3 lignes (n°, type, durée) : toutes les cases ont la même hauteur et les barres sont alignées
       const raw = String(s.text || "").replace(/^terminée$/, "terminée");
-      const t = raw.startsWith("prévue ") ? ["prévue", raw.slice(7)] : raw.includes(" / ") ? [raw.split(" / ")[0], "/ " + raw.split(" / ")[1]] : raw.includes(" · ") ? raw.split(" · ") : raw.includes(" ") ? [raw.slice(0, raw.indexOf(" ")), raw.slice(raw.indexOf(" ") + 1)] : [raw];
-      return '<div class="step"><div class="box" style="background:'+bgc+'"><span class="sh"><b>'+s.no+'</b>'+arrow(s.dis)+'</span><span>'+esc(t[0])+'</span><span>'+esc(t.slice(1).join(' · ')||'\u00a0')+'</span></div><div class="bar"><i style="width:'+Math.round(fr*100)+'%"></i></div></div>';
+      const t = raw.startsWith("prévue ") ? ["prévue", raw.slice(7)] : raw.includes(" / ") ? [raw.split(" / ")[0], "/ " + raw.split(" / ")[1]] : raw.includes(" · ") ? raw.split(" · ") : /^\S+ C\d+$/.test(raw) ? raw.split(" ") : [raw];
+      return '<div class="step"><div class="box" style="background:'+bgc+'"><span class="sh"><b>'+s.no+'</b>'+arrow(s.dis)+'</span><span>'+esc(t[0])+'</span><span>'+esc(t[1]||'\u00a0')+'</span>'+(t.length > 2 ? '<span>'+esc(t.slice(2).join(' · '))+'</span>' : '')+'</div><div class="bar"><i style="width:'+Math.round(fr*100)+'%"></i></div></div>';
     }).join("") + '</div>';
   }
   if (m.start) {
@@ -424,73 +430,88 @@ function card(m, stale){
 function arrow(dis){
   return '<svg class="arr" width="15" height="15" viewBox="0 0 16 16" aria-label="'+(dis?'Décharge':'Restauration')+'"><circle cx="8" cy="8" r="8" fill="'+(dis?'#B5642A':'#2F63A8')+'"/><path d="'+(dis?'M8 4v7M5 8.2l3 3 3-3':'M8 12V5M5 7.8l3-3 3 3')+'" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
+// Graphique dessiné comme celui du PC : 3 bandes (tension 45 %, courant 33 %, température 22 %, écart 6 %),
+// échelles envoyées par le PC (même calcul), graduations et repères de temps identiques, pastilles d'étapes en haut.
+const LANES = [["V",1,"#3A6DAE",0.45],["A",2,"#C97B36",0.33],["°C",3,"#8463B3",0.22]], GAP = 0.06;
+function niceStep(xmax){ const st=[10/3600,30/3600,1/60,2/60,5/60,0.25,0.5,1,2,4,6,12,24,48]; for (const s of st) if (xmax/s <= 10) return s; return 96; }
+function hourLabel(x, step){
+  if (step >= 1) return Math.round(x) + "h";
+  if (step < 1/60) { const sec = Math.round(x*3600); return sec < 60 ? sec + "s" : sec % 60 === 0 ? (sec/60) + "min" : Math.floor(sec/60) + "min" + String(sec%60).padStart(2,"0"); }
+  const tm = Math.round(x*60); return tm < 60 ? tm + "min" : Math.floor(tm/60) + "h" + String(tm%60).padStart(2,"0");
+}
+function axisLabel(mn, mx, i, n, unit){
+  const v = mx - (mx - mn) * i / n, stepV = (mx - mn) / n;
+  const t = Math.abs(stepV - Math.round(stepV)) > 1e-6 || (mx - mn) < 8 ? num(v, 1) : num(v, 0);
+  return i === 0 ? t + " " + unit : t;
+}
 function drawChart(key, pts){
   const cv = document.getElementById("c_" + key); if (!cv || !pts || pts.length < 2) return;
+  const m = machines[key] || {};
   const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
   cv.width = W*dpr; cv.height = H*dpr;
   const g = cv.getContext("2d"); g.scale(dpr, dpr);
-  const tmax = Math.max(pts[pts.length-1][0], 1/3600);
-  const padL = 40, padR = 8, padB = 16, padT = 22;
-  // 3 bandes comme sur le PC : tension, courant, température (parts de la hauteur)
-  const lanes = [["V",1,"#3A6DAE",0.42],["A",2,"#C97B36",0.33],["°C",3,"#8463B3",0.25]];
-  const X = t => padL + t / tmax * (W - padL - padR);
-  let top = padT;
-  g.font = "600 11px Nunito, sans-serif";
-  lanes.forEach(([unit, idx, col, share]) => {
-    const h = (H - padB - padT) * share, bot = top + h - 8;
-    const vals = pts.map(p => p[idx]).filter(x => x != null && !isNaN(x));
-    if (vals.length) {
-      let lo = Math.min(...vals), hi = Math.max(...vals);
-      if (unit === "A") lo = Math.min(0, lo);
-      // Échelles « rondes » comme sur le PC : pas de 5 V, 20 A, 5 °C
-      const stepU = unit === "V" ? 5 : unit === "A" ? 20 : 5;
-      // Marge d'une demi-unité : une valeur constante (ex. 15 °C) n'est jamais collée au bord (échelle 10–20)
-      const mn = lo, mx = hi;
-      lo = Math.floor((mn - 0.5) / stepU) * stepU; hi = Math.ceil((mx + 0.5) / stepU) * stepU;
-      if (mn >= 0 && unit !== "°C") lo = Math.max(0, lo);
-      if (hi - lo < stepU) hi = lo + stepU;
-      if (unit === "V" && hi - lo < 10) { hi += 5; lo = Math.max(0, lo - 5); }
-      const Y = v => bot - (v - lo) / (hi - lo) * (bot - top - 2);
-      g.fillStyle = col; g.fillRect(padL - 3, top, 2, bot - top);
-      g.textAlign = "right";
-      g.fillText(Math.round(hi) + " " + unit, padL - 7, top + 9);
-      g.fillText(String(Math.round(lo)), padL - 7, bot);
-      g.strokeStyle = "#EDF0F4"; g.lineWidth = 1; g.beginPath(); g.moveTo(padL, bot + 0.5); g.lineTo(W - padR, bot + 0.5); g.stroke();
-      g.beginPath(); let started = false;
-      pts.forEach(p => { const v = p[idx]; if (v == null || isNaN(v)) return; const x = X(p[0]), y = Y(v); started ? g.lineTo(x, y) : g.moveTo(x, y); started = true; });
-      g.lineTo(X(pts[pts.length-1][0]), bot); g.lineTo(X(pts[0][0]), bot); g.closePath();
-      g.globalAlpha = 0.08; g.fillStyle = col; g.fill(); g.globalAlpha = 1;
-      g.beginPath(); started = false;
-      pts.forEach(p => { const v = p[idx]; if (v == null || isNaN(v)) return; const x = X(p[0]), y = Y(v); started ? g.lineTo(x, y) : g.moveTo(x, y); started = true; });
-      g.strokeStyle = col; g.lineWidth = 1.8; g.stroke();
-      const lv = vals[vals.length - 1];
-      const lab = (unit === "°C" ? Math.round(lv) : num(lv, unit === "V" ? 1 : 0)) + " " + unit;
-      g.font = "700 11px Nunito, sans-serif"; const tw = g.measureText(lab).width + 10;
-      const ly = Math.min(Math.max(Y(lv), top + 8), bot - 2), lx = W - padR - tw;
-      g.fillStyle = col; roundRect(g, lx, ly - 8, tw, 16, 8); g.fill();
-      g.fillStyle = "#fff"; g.textAlign = "center"; g.fillText(lab, lx + tw/2, ly + 4);
-      g.font = "600 11px Nunito, sans-serif";
+  const padL = 44, padR = 8, padT = 24, padB = 18;
+  const pw = W - padL - padR, ph = H - padT - padB;
+  const sc = Array.isArray(m.sc) ? m.sc : null;
+  const lastX = pts[pts.length-1][0];
+  const xmax = Math.max(sc ? sc[6] : lastX, lastX, 1/60);
+  const X = t => padL + Math.min(t, xmax) / xmax * pw;
+  const grid = "#EDF0F4";
+  // repères de temps (tracés avant les courbes pour ne pas les hachurer)
+  const step = niceStep(xmax); g.font = "600 10.5px Nunito, sans-serif"; g.fillStyle = "#5B687A"; g.textBaseline = "alphabetic";
+  const every = Math.max(1, Math.ceil((xmax / step + 1) / 6));   // au plus 6 libellés sur un téléphone
+  let k = 0;
+  for (let x = 0; x <= xmax + 1e-9; x += step, k++) {
+    const px = X(x);
+    g.strokeStyle = grid; g.beginPath(); g.moveTo(px + 0.5, padT); g.lineTo(px + 0.5, H - padB); g.stroke();
+    if (k % every === 0) { g.textAlign = k === 0 ? "left" : "center"; g.fillText(hourLabel(x, step), px, H - 4); }
+  }
+  // bandes
+  const totalW = LANES.reduce((a, l) => a + l[3], 0), avail = 1 - GAP * (LANES.length - 1);
+  let pos = 0; const pills = [];   // pastilles de valeur dessinées en dernier (par-dessus les séparateurs)
+  LANES.forEach(([unit, idx, col, wgt], li) => {
+    const hgt = avail * wgt / totalW, top = padT + ph * pos, bot = padT + ph * (pos + hgt); pos += hgt + GAP;
+    let mn, mx;
+    if (sc) { mn = sc[li*2]; mx = sc[li*2+1]; }
+    else { const vals = pts.map(p => p[idx]).filter(x => x != null); mn = Math.min(...vals); mx = Math.max(...vals); if (mx - mn < 1) { mx += 1; mn -= 1; } }
+    const Y = v => bot - (v - mn) / (mx - mn) * (bot - top);
+    g.fillStyle = col; g.fillRect(padL - 6, top, 3, bot - top);
+    const n = (bot - top) >= 150 ? 4 : (bot - top) >= 60 ? 2 : 1;
+    g.font = "600 10.5px Nunito, sans-serif"; g.textAlign = "right"; g.textBaseline = "middle";
+    for (let i = 0; i <= n; i++) {
+      const y = top + (bot - top) * i / n;
+      g.strokeStyle = grid; g.lineWidth = 1; g.beginPath(); g.moveTo(padL, y + 0.5); g.lineTo(W - padR, y + 0.5); g.stroke();
+      g.fillStyle = col; g.fillText(axisLabel(mn, mx, i, n, unit), padL - 10, Math.min(Math.max(y, top + 6), bot - 6));   // reste dans sa bande : pas de chevauchement avec la bande voisine
     }
-    top += h;
+    const line = () => { g.beginPath(); let st = false; pts.forEach(p => { const v = p[idx]; if (v == null || isNaN(v)) return; const x = X(p[0]), y = Math.max(top, Math.min(bot, Y(v))); st ? g.lineTo(x, y) : g.moveTo(x, y); st = true; }); };
+    line(); g.lineTo(X(lastX), bot); g.lineTo(X(pts[0][0]), bot); g.closePath(); g.globalAlpha = 0.08; g.fillStyle = col; g.fill(); g.globalAlpha = 1;
+    line(); g.strokeStyle = col; g.lineWidth = 1.8; g.stroke();
+    const lv = [...pts].reverse().find(p => p[idx] != null);
+    if (lv) pills.push(() => {
+      const lab = (unit === "°C" ? Math.round(lv[idx]) : num(lv[idx], unit === "V" ? 1 : 0)) + " " + unit;
+      g.font = "700 11px Nunito, sans-serif"; const tw = g.measureText(lab).width + 10;
+      const ly = Math.min(Math.max(Y(lv[idx]), top + 8), bot - 8);
+      let lx = X(lastX) + 4; if (lx + tw > W - padR) lx = X(lastX) - tw - 4;
+      g.fillStyle = col; roundRect(g, lx, ly - 8, tw, 16, 8); g.fill();
+      g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(lab, lx + tw/2, ly + 0.5);
+    });
   });
-  // Séparateurs d'étapes et pastilles numérotées en haut (orange = décharge, bleu = restauration), comme sur le PC
+  // étapes : séparateurs et pastilles
   const segs = []; let s0 = 0;
-  for (let i = 1; i <= pts.length; i++) if (i === pts.length || pts[i][4] !== pts[s0][4]) { segs.push([pts[s0][0], pts[i-1][0], pts[s0][4], i < pts.length ? pts[i][0] : pts[i-1][0]]); s0 = i; }
+  for (let i = 1; i <= pts.length; i++) if (i === pts.length || pts[i][4] !== pts[s0][4]) { segs.push([pts[s0][0], i < pts.length ? pts[i][0] : pts[i-1][0], pts[s0][4]]); s0 = i; }
   g.setLineDash([3,3]); g.strokeStyle = "#7A8696"; g.lineWidth = 1;
-  segs.slice(1).forEach(sg => { const x = X(sg[0]); g.beginPath(); g.moveTo(x, padT - 2); g.lineTo(x, H - padB); g.stroke(); });
+  segs.slice(1).forEach(sg => { const x = X(sg[0]); g.beginPath(); g.moveTo(x, padT - 4); g.lineTo(x, H - padB); g.stroke(); });
   g.setLineDash([]);
-  const info = (machines[key] && machines[key].steps) || [];
-  segs.forEach((sg, i) => {
-    const st = info.find(x => x.no === i + 1) || {}, x0 = X(sg[0]), x1 = X(sg[3]);
-    if (x1 - x0 < 14 || !sg[2]) return;
+  const info = m.steps || [];
+  segs.forEach(sg => {
+    if (!sg[2]) return;
+    const st = info.find(x => x.slot === sg[2]) || {}, x0 = X(sg[0]), x1 = X(sg[1]);
+    if (x1 - x0 < 14) return;
     const cx = (x0 + x1) / 2, dis = st.dis;
-    g.fillStyle = dis ? "#F6E6D8" : "#E3EBF5"; g.beginPath(); g.arc(cx, 10, 8, 0, Math.PI*2); g.fill();
-    g.fillStyle = dis ? "#8A4A1A" : "#24497A"; g.font = "700 10px Nunito, sans-serif"; g.textAlign = "center"; g.fillText(String(i + 1), cx, 13.5);
+    g.fillStyle = dis ? "#F6E6D8" : "#E3EBF5"; g.beginPath(); g.arc(cx, 11, 8, 0, Math.PI*2); g.fill();
+    g.fillStyle = dis ? "#8A4A1A" : "#24497A"; g.font = "700 10px Nunito, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(st.no || sg[2]), cx, 11.5);
   });
-  g.fillStyle = "#5B687A"; g.font = "600 11px Nunito, sans-serif";
-  g.textAlign = "left"; g.fillText("0h", padL, H - 3);
-  g.textAlign = "center"; g.fillText(fmtH(tmax/2), (padL + W - padR)/2, H - 3);
-  g.textAlign = "right"; g.fillText(fmtH(tmax), W - padR, H - 3);
+  pills.forEach(f => f());
 }
 function roundRect(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x+r, y); g.arcTo(x+w, y, x+w, y+h, r); g.arcTo(x+w, y+h, x, y+h, r); g.arcTo(x, y+h, x, y, r); g.arcTo(x, y, x+w, y, r); g.closePath(); }
 function fmtH(h){ const m = Math.round(h*60); if (h < 1) return h*3600 < 60 ? Math.round(h*3600) + "s" : Math.max(1, m) + "min"; return Math.floor(m/60) + "h" + String(m%60).padStart(2,"0"); }
@@ -524,7 +545,11 @@ async function waitResult(key, at, n){
       render(); setTimeout(() => { delete pending[key]; refresh(); }, 15000); refresh(); return;
     }
   } catch(e){}
-  if (n >= 15) { pending[key] = "⚠ Pas de réponse de MCS Studio. Vérifiez que le PC de l'atelier est allumé."; render(); return; }
+  if (n >= 15) {
+    // Sans réponse : l'ordre est annulé, pour qu'il ne s'exécute jamais plus tard sans qu'on s'y attende
+    try { await dbPut("commands/" + key, { cmd: "stop", at, result: "annulé : pas de réponse de MCS Studio", done: Date.now() }); } catch(e){}
+    pending[key] = "⚠ Pas de réponse de MCS Studio : ordre annulé. Vérifiez que le PC de l'atelier est allumé."; render(); return;
+  }
   setTimeout(() => waitResult(key, at, n+1), 3000);
 }
 
