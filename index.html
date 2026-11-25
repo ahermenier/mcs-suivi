@@ -17,18 +17,18 @@
 <style>
 :root{--bg:#EEF1F5;--card:#fff;--line:#DCE2EA;--text:#1B2430;--muted:#5B687A;--volt:#3A6DAE;--amp:#C97B36;--temp:#8463B3;--ok:#17914F;--okSoft:#E3F4EA;--warn:#B86A00;--warnSoft:#FCEFD9;--danger:#C3352B;--dangerSoft:#FBE7E5;--blue:#1F5FD1;--ampCell:#EFCFB2;--voltCell:#C6D7EE;--ampNext:#F6E6D8;--voltNext:#E3EBF5}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--text);font-family:Nunito,system-ui,sans-serif;-webkit-text-size-adjust:100%}
+html,body{margin:0;background:#fff;color:var(--text);font-family:Nunito,system-ui,sans-serif;-webkit-text-size-adjust:100%}
 body{padding-top:env(safe-area-inset-top)}
-#appView{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:640px;margin:0 auto;padding:0 10px}
+#appView{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:640px;margin:0 auto;padding:0 8px}
 header{display:flex;align-items:center;justify-content:space-between;padding:8px 4px 6px;gap:8px}
 header .sub{font-size:12px;color:var(--muted)}
 .link{border:0;background:none;color:var(--muted);font:600 13px Nunito,sans-serif;padding:6px 2px}
-.tabs{display:flex;gap:4px;background:#E1E6ED;border-radius:12px;padding:3px;margin-bottom:8px}
+.tabs{display:flex;gap:4px;background:#E8ECF1;border-radius:12px;padding:3px;margin-bottom:8px}
 .tabs button{flex:1;min-width:0;border:0;background:none;border-radius:9px;height:38px;font:700 15px Nunito,sans-serif;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;overflow:hidden}
 .tabs button.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .tabs .sim{font-size:11px;font-weight:600;color:var(--muted)}
 main{flex:1;min-height:0;display:flex;flex-direction:column;padding-bottom:calc(8px + env(safe-area-inset-bottom))}
-.card{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px}
+.card{flex:1;min-height:0;display:flex;flex-direction:column;padding:2px 2px 0}
 .chartbox{flex:1;min-height:150px;margin-top:10px;position:relative}
 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .name{font-size:19px;font-weight:800}
@@ -87,7 +87,7 @@ input{width:100%;height:46px;border:1px solid var(--line);border-radius:10px;pad
   .step .box{font-size:10px;min-height:30px;padding:3px 4px}
   .times{font-size:11px;margin-top:6px}
   .acts button{height:38px}
-  .card{padding:10px}
+  .card{padding:0}
 }
 </style>
 </head>
