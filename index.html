@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261125202019">
+<meta name="mcs-build" content="20261125202253">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261125202019') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261125202253') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -36,7 +36,7 @@ html,body{margin:0;background:#fff;color:var(--text);font-family:Nunito,system-u
 /* iPhone (iOS 26) : le système floute une bande sous l'heure et la batterie, même hors de la barre d'état.
    Rien d'écrit dans cette bande : la page commence par les onglets, un peu plus bas ; « Mis à jour » passe en bas. */
 
-#appView{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 20px) 8px calc(4px + env(safe-area-inset-bottom))}
+#appView{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 4px) 8px calc(4px + env(safe-area-inset-bottom))}
 header{display:flex;align-items:center;justify-content:space-between;padding:6px 4px 0;gap:8px;order:9}
 header .sub{font-size:12px;color:var(--muted)}
 .link{border:0;background:none;color:var(--muted);font:600 13px Nunito,sans-serif;padding:6px 2px}
@@ -340,6 +340,9 @@ function render(){
 })();
 window.addEventListener("resize", () => scheduleRender());
 // Fraîcheur des données, discrète, sur la ligne d'état : « en direct » ou « il y a 4 min »
+function hoursOf(t){ const r = /^(\d+)h(\d\d)$/.exec(t || ""); return r ? +r[1] + r[2]/60 : null; }
+let staleTimer = null;
+function staleHist(){ if (!staleTimer) staleTimer = setTimeout(() => { staleTimer = null; loadHist(); }, 5000); }
 function freshTxt(m){
   const age = Date.now() - (m.updated || 0);
   if (!m.updated) return '<span class="fresh"></span>';
@@ -369,11 +372,14 @@ function card(m, stale){
     h += '<div><div class="l">Courant</div><div class="v" style="color:var(--amp)">'+num(m.a,1)+' A</div><div class="c">'+(active?'consigne '+num(m.setA,1):'&nbsp;')+'</div></div>';
     h += '<div><div class="l">Température</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+' °C')+'</div><div class="c">'+(active?'batterie':'&nbsp;')+'</div></div></div>';
   }
-  const hh = hists[m.key];
+  let hh = hists[m.key];
+  // Graphe d'un autre cycle (programme relancé, graphe pas encore renvoyé par le PC) : on ne l'affiche pas
+  const elH = hoursOf(m.elapsed);
+  if (hh && hh.length && elH != null && hh[hh.length-1][0] > elH + 0.05) { hh = null; staleHist(); }
   h += '<div class="chartbox">' + (hh && hh.length > 1 ? '<canvas id="c_'+esc(m.key)+'"></canvas>' : '<div class="empty" style="margin-top:18%">'+(active ? 'Courbe en cours de chargement…' : 'Machine au repos')+'</div>') + '</div>';
   if (m.steps && m.steps.length) {
     // Cycle arrêté : les étapes que la courbe n'a jamais atteintes sont « non faites », même si un ancien MCS Studio les dit terminées
-    const hh2 = hists[m.key], maxStep = !active && hh2 && hh2.length ? Math.max(...hh2.map(p => p[4] || 0)) : 0;
+    const hh2 = hh, maxStep = !active && hh2 && hh2.length ? Math.max(...hh2.map(p => p[4] || 0)) : 0;
     h += '<div class="steps">' + m.steps.map(s0 => {
       const s = (maxStep > 0 && s0.no > maxStep && s0.state === "done") ? Object.assign({}, s0, { state: "skip", text: "non faite" }) : s0;
       const bgc = (s.state === "next" || s.state === "skip") ? (s.dis ? "var(--ampNext)" : "var(--voltNext)") : (s.dis ? "var(--ampCell)" : "var(--voltCell)");
