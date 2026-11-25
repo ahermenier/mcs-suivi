@@ -12,6 +12,20 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>MCS Suivi</title>
+<meta name="mcs-build" content="20261125200033">
+<script>
+// GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
+// et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
+(function(){
+  try {
+    var mine = document.querySelector('meta[name="mcs-build"]').content;
+    fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
+      var m = t.match(/name="mcs-build" content="([^"]+)"/);
+      if (m && m[1] !== mine && m[1] !== '20261125200033') location.replace(location.pathname + '?b=' + m[1]);
+    }).catch(function(){});
+  } catch(e) {}
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
