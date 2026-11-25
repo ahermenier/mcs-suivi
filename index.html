@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261125201719">
+<meta name="mcs-build" content="20261125202019">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261125201719') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261125202019') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -372,7 +372,10 @@ function card(m, stale){
   const hh = hists[m.key];
   h += '<div class="chartbox">' + (hh && hh.length > 1 ? '<canvas id="c_'+esc(m.key)+'"></canvas>' : '<div class="empty" style="margin-top:18%">'+(active ? 'Courbe en cours de chargement…' : 'Machine au repos')+'</div>') + '</div>';
   if (m.steps && m.steps.length) {
-    h += '<div class="steps">' + m.steps.map(s => {
+    // Cycle arrêté : les étapes que la courbe n'a jamais atteintes sont « non faites », même si un ancien MCS Studio les dit terminées
+    const hh2 = hists[m.key], maxStep = !active && hh2 && hh2.length ? Math.max(...hh2.map(p => p[4] || 0)) : 0;
+    h += '<div class="steps">' + m.steps.map(s0 => {
+      const s = (maxStep > 0 && s0.no > maxStep && s0.state === "done") ? Object.assign({}, s0, { state: "skip", text: "non faite" }) : s0;
       const bgc = (s.state === "next" || s.state === "skip") ? (s.dis ? "var(--ampNext)" : "var(--voltNext)") : (s.dis ? "var(--ampCell)" : "var(--voltCell)");
       const fr = s.state === "done" ? 1 : s.state === "now" ? (s.frac||0) : 0;
       // Toujours 3 lignes (n°, type, durée) : toutes les cases ont la même hauteur et les barres sont alignées
