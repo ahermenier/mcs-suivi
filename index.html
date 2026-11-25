@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261125201449">
+<meta name="mcs-build" content="20261125201547">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261125201449') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261125201547') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -404,7 +404,10 @@ function drawChart(key, pts){
       if (unit === "A") lo = Math.min(0, lo);
       // Échelles « rondes » comme sur le PC : pas de 5 V, 20 A, 5 °C
       const stepU = unit === "V" ? 5 : unit === "A" ? 20 : 5;
-      lo = Math.floor(lo / stepU) * stepU; hi = Math.ceil(hi / stepU) * stepU;
+      // Marge d'une demi-unité : une valeur constante (ex. 15 °C) n'est jamais collée au bord (échelle 10–20)
+      const mn = lo, mx = hi;
+      lo = Math.floor((mn - 0.5) / stepU) * stepU; hi = Math.ceil((mx + 0.5) / stepU) * stepU;
+      if (mn >= 0 && unit !== "°C") lo = Math.max(0, lo);
       if (hi - lo < stepU) hi = lo + stepU;
       if (unit === "V" && hi - lo < 10) { hi += 5; lo = Math.max(0, lo - 5); }
       const Y = v => bot - (v - lo) / (hi - lo) * (bot - top - 2);
@@ -450,7 +453,7 @@ function drawChart(key, pts){
   g.textAlign = "right"; g.fillText(fmtH(tmax), W - padR, H - 3);
 }
 function roundRect(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x+r, y); g.arcTo(x+w, y, x+w, y+h, r); g.arcTo(x+w, y+h, x, y+h, r); g.arcTo(x, y+h, x, y, r); g.arcTo(x, y, x+w, y, r); g.closePath(); }
-function fmtH(h){ const m = Math.round(h*60); return Math.floor(m/60) + "h" + String(m%60).padStart(2,"0"); }
+function fmtH(h){ const m = Math.round(h*60); if (h < 1) return h*3600 < 90 ? Math.round(h*3600) + "s" : m + "min"; return Math.floor(m/60) + "h" + String(m%60).padStart(2,"0"); }
 
 // ---------- ordre : Arrêter seulement, avec confirmation (jamais de démarrage ni de pause à distance) ----------
 let modalCtx = null;
