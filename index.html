@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<!-- Seuls les scripts de cette page s'exécutent : pas de bandeau publicitaire ajouté par l'hébergeur -->
+<meta http-equiv="Content-Security-Policy" content="script-src 'unsafe-inline'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F5FD1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MCS Suivi">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>MCS Suivi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EEF1F5;--card:#fff;--line:#DCE2EA;--text:#1B2430;--muted:#5B687A;--volt:#3A6DAE;--amp:#C97B36;--temp:#8463B3;--ok:#17914F;--okSoft:#E3F4EA;--warn:#B86A00;--warnSoft:#FCEFD9;--danger:#C3352B;--dangerSoft:#FBE7E5;--blue:#1F5FD1;--ampCell:#EFCFB2;--voltCell:#C6D7EE;--ampNext:#F6E6D8;--voltNext:#E3EBF5}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Nunito,system-ui,sans-serif;-webkit-text-size-adjust:100%}
+body{padding-top:env(safe-area-inset-top)}
+#appView{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:640px;margin:0 auto;padding:0 10px}
+header{display:flex;align-items:center;justify-content:space-between;padding:8px 4px 6px;gap:8px}
+header .sub{font-size:12px;color:var(--muted)}
+.link{border:0;background:none;color:var(--muted);font:600 13px Nunito,sans-serif;padding:6px 2px}
+.tabs{display:flex;gap:4px;background:#E1E6ED;border-radius:12px;padding:3px;margin-bottom:8px}
+.tabs button{flex:1;min-width:0;border:0;background:none;border-radius:9px;height:38px;font:700 15px Nunito,sans-serif;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;overflow:hidden}
+.tabs button.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.tabs .sim{font-size:11px;font-weight:600;color:var(--muted)}
+main{flex:1;min-height:0;display:flex;flex-direction:column;padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+.card{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px}
+.chartbox{flex:1;min-height:150px;margin-top:10px;position:relative}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.name{font-size:19px;font-weight:800}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.pill{font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px}
+.simchip{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#9A5B00;background:#FDF0DC;border:1px solid #F3C98B;padding:2px 8px;border-radius:20px;margin-left:auto}
+.idl{font-size:13px;color:var(--muted);margin-top:2px}
+.idl b{color:var(--text)}
+.res{border-radius:10px;padding:10px 12px;margin-top:10px;border:1px solid}
+.res .t{font-size:18px;font-weight:800}
+.res .s{font-size:12px;color:var(--muted);margin-top:2px}
+.band{display:grid;grid-template-columns:repeat(3,1fr);background:#F3F5F8;border:1px solid var(--line);border-radius:12px;margin-top:10px;padding:6px 0}
+.band div{text-align:center;border-left:1px solid var(--line)}
+.band div:first-child{border-left:0}
+.band .l{font-size:12px;color:var(--muted)}
+.band .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.band .c{font-size:11px;color:var(--muted)}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;border:1px solid var(--line);border-radius:8px;background:#fff}
+.steps{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;margin-top:10px;align-items:stretch}
+.step{min-width:0;display:flex;flex-direction:column}
+.step .box{flex:1;border-radius:6px;padding:4px 5px;font-size:11px;line-height:1.25;color:#3B2A1A;overflow:hidden;white-space:nowrap}
+.step .box span{display:block;overflow:hidden;text-overflow:ellipsis}
+.step .box .sh{display:flex;align-items:center;gap:4px;font-size:12px;margin-bottom:1px}
+.step .box .arr{flex:none}
+.step .box b{font-weight:800}
+.step .bar{height:4px;border-radius:2px;background:#D5DBE3;margin-top:3px;overflow:hidden}
+.step .bar i{display:block;height:100%;background:var(--ok)}
+.times{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px;gap:8px;flex-wrap:wrap}
+.times b{color:var(--text)}
+.acts{display:flex;justify-content:center;margin-top:10px}
+.acts button{width:60%;max-width:240px;height:40px;border-radius:12px;font:700 16px Nunito,sans-serif;border:1px solid var(--line);background:var(--card);color:var(--text)}
+.acts .stop{background:var(--danger);border-color:var(--danger);color:#fff}
+.note{font-size:13px;margin-top:8px;color:var(--muted)}
+.stale{background:var(--warnSoft);color:var(--warn);border-radius:10px;padding:8px 10px;font-size:13px;font-weight:600;margin:0 0 12px}
+.login{max-width:380px;margin:12vh auto 0;padding:0 16px}
+.login h1{font-size:26px;font-weight:800;margin:0 0 4px}
+.login p{color:var(--muted);font-size:14px;margin:0 0 18px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input{width:100%;height:46px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:600 16px Nunito,sans-serif;background:#fff;color:var(--text)}
+.primary{width:100%;height:48px;border:0;border-radius:12px;background:var(--blue);color:#fff;font:700 16px Nunito,sans-serif;margin-top:16px}
+.err{color:var(--danger);font-size:14px;margin-top:10px;min-height:20px}
+.empty{text-align:center;color:var(--muted);margin-top:20vh;font-size:15px}
+.modal{position:fixed;inset:0;background:rgba(20,28,40,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet{background:#fff;width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+.sheet h2{margin:0 0 4px;font-size:19px;font-weight:800}
+.sheet p{margin:0 0 10px;color:var(--muted);font-size:14px}
+.pin{letter-spacing:12px;text-align:center;font-size:26px;font-weight:800}
+.sheet .row2{display:flex;gap:8px;margin-top:14px}
+.sheet .row2 button{flex:1;height:48px;border-radius:12px;font:700 16px Nunito,sans-serif;border:1px solid var(--line);background:#fff}
+.sheet .row2 .go{background:var(--danger);border-color:var(--danger);color:#fff}
+.sheet .row2 .go.neutral{background:var(--blue);border-color:var(--blue)}
+.hidden{display:none!important}
+@media (max-height:720px){
+  .band .v{font-size:20px}.band .l,.band .c{font-size:11px}
+  .chartbox{min-height:120px}
+  .step .box{font-size:10px;min-height:30px;padding:3px 4px}
+  .times{font-size:11px;margin-top:6px}
+  .acts button{height:38px}
+  .card{padding:10px}
+}
+</style>
+</head>
+<body>
+
+<section id="loginView" class="login hidden">
+  <h1>MCS Suivi</h1>
+  <p>Connexion une seule fois sur ce téléphone, avec le compte créé dans Firebase.</p>
+  <form id="loginForm">
+    <label for="email">Adresse mail</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="pass">Mot de passe</label>
+    <input id="pass" type="password" autocomplete="current-password" required>
+    <button class="primary" type="submit" id="loginBtn">Se connecter</button>
+    <div class="err" id="loginErr"></div>
+  </form>
+</section>
+
+<div id="appView" class="hidden">
+  <header>
+    <div class="sub" id="upd">…</div>
+    <button class="link" id="logoutBtn">Déconnexion</button>
+  </header>
+  <div id="tabs" class="tabs hidden"></div>
+  <main>
+    <div id="stale" class="stale hidden"></div>
+    <div id="list" style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
+  </main>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="sheet">
+    <h2 id="mTitle">Arrêter</h2>
+    <p id="mText"></p>
+
+    <div class="row2"><button id="mCancel">Annuler</button><button id="mGo" class="go">Confirmer</button></div>
+  </div>
+</div>
+
+<script>
+const CFG = {
+  apiKey: "AIzaSyD9wWBauLRixFVOsr8pLYfp-joWpVWfqts",
+  db: "https://mcs-atelier-default-rtdb.europe-west1.firebasedatabase.app"
+};
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { v==null ? localStorage.removeItem(k) : localStorage.setItem(k,v); } catch(e){} }
+};
+let idToken = null, tokenUntil = 0, timer = null, machines = {}, pending = {};
+
+// ---------- connexion (REST Firebase Auth) ----------
+async function signIn(email, password){
+  const r = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + CFG.apiKey, {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ email, password, returnSecureToken:true })
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error && j.error.message || "Connexion refusée");
+  idToken = j.idToken; tokenUntil = Date.now() + (parseInt(j.expiresIn)||3600)*1000 - 120000;
+  store.set("mcs_refresh", j.refreshToken);
+}
+async function ensureToken(){
+  if (idToken && Date.now() < tokenUntil) return;
+  const rt = store.get("mcs_refresh");
+  if (!rt) throw new Error("NOLOGIN");
+  const r = await fetch("https://securetoken.googleapis.com/v1/token?key=" + CFG.apiKey, {
+    method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body: "grant_type=refresh_token&refresh_token=" + encodeURIComponent(rt)
+  });
+  const j = await r.json();
+  if (!r.ok) { store.set("mcs_refresh", null); throw new Error("NOLOGIN"); }
+  idToken = j.id_token; tokenUntil = Date.now() + (parseInt(j.expires_in)||3600)*1000 - 120000;
+  store.set("mcs_refresh", j.refresh_token);
+}
+async function dbGet(path){
+  await ensureToken();
+  const r = await fetch(CFG.db + "/" + path + ".json?auth=" + encodeURIComponent(idToken));
+  if (r.status === 401) { idToken = null; throw new Error("Accès refusé"); }
+  if (!r.ok) throw new Error("Erreur " + r.status);
+  return r.json();
+}
+async function dbPut(path, value){
+  await ensureToken();
+  const r = await fetch(CFG.db + "/" + path + ".json?auth=" + encodeURIComponent(idToken), {
+    method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(value)
+  });
+  if (!r.ok) throw new Error("Erreur " + r.status);
+}
+
+function friendly(msg){
+  if (/INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND/.test(msg)) return "Adresse ou mot de passe incorrect.";
+  if (/TOO_MANY_ATTEMPTS/.test(msg)) return "Trop d'essais. Réessayez dans quelques minutes.";
+  if (/Failed to fetch|NetworkError|Load failed/.test(msg)) return "Pas de connexion Internet.";
+  return msg;
+}
+
+// ---------- écrans ----------
+function showLogin(){ $("appView").classList.add("hidden"); $("loginView").classList.remove("hidden"); clearInterval(timer); timer = null; closeStream(); }
+function showApp(){
+  $("loginView").classList.add("hidden"); $("appView").classList.remove("hidden");
+  refresh(); loadHist(); openStream();
+  // Filet de sécurité : relecture complète toutes les 30 s, graphes toutes les 60 s ; l'affichage vit surtout du flux en direct
+  if (!timer) { timer = setInterval(() => { refresh(); if (++tick % 2 === 0) loadHist(); }, 30000); }
+}
+setInterval(() => { if (timer) scheduleRender(); }, 5000);
+let tick = 0, es = null, esTimer = null, hists = {}, renderPending = false;
+// Flux en direct Firebase (Server-Sent Events) : chaque envoi du PC (toutes les 5 s) arrive aussitôt
+async function openStream(){
+  closeStream();
+  try { await ensureToken(); } catch(e){ if (e.message === "NOLOGIN") showLogin(); return; }
+  es = new EventSource(CFG.db + "/state.json?auth=" + encodeURIComponent(idToken));
+  const onData = (e, merge) => {
+    let d; try { d = JSON.parse(e.data); } catch(x){ return; }
+    applyAt(d.path, d.data, merge); scheduleRender();
+  };
+  es.addEventListener("put", e => onData(e, false));
+  es.addEventListener("patch", e => onData(e, true));
+  es.addEventListener("auth_revoked", () => { idToken = null; openStream(); });
+  es.addEventListener("cancel", () => { closeStream(); });
+  es.onerror = () => { closeStream(); clearTimeout(esTimer); esTimer = setTimeout(openStream, 5000); };
+  // Jeton valable 1 h : on rouvre le flux avec un jeton neuf avant qu'il expire
+  clearTimeout(esTimer); esTimer = setTimeout(() => { idToken = null; openStream(); }, Math.max(60000, tokenUntil - Date.now()));
+}
+function closeStream(){ if (es) { es.close(); es = null; } }
+function applyAt(path, data, merge){
+  const parts = (path || "/").split("/").filter(Boolean);
+  if (!parts.length) { machines = merge ? Object.assign(machines, data || {}) : (data || {}); return; }
+  let o = machines;
+  for (let i = 0; i < parts.length - 1; i++) { if (o[parts[i]] == null || typeof o[parts[i]] !== "object") o[parts[i]] = {}; o = o[parts[i]]; }
+  const last = parts[parts.length - 1];
+  if (data == null) delete o[last];
+  else if (merge && typeof o[last] === "object") Object.assign(o[last], data);
+  else o[last] = data;
+}
+function scheduleRender(){ if (renderPending) return; renderPending = true; requestAnimationFrame(() => { renderPending = false; render(); }); }
+async function loadHist(){ try { hists = await dbGet("hist") || {}; scheduleRender(); } catch(e){} }
+
+$("loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  $("loginErr").textContent = ""; $("loginBtn").disabled = true; $("loginBtn").textContent = "Connexion…";
+  try { await signIn($("email").value.trim(), $("pass").value); $("pass").value = ""; showApp(); }
+  catch(err){ $("loginErr").textContent = friendly(err.message); }
+  finally { $("loginBtn").disabled = false; $("loginBtn").textContent = "Se connecter"; }
+});
+$("logoutBtn").addEventListener("click", () => { if (confirm("Se déconnecter de ce téléphone ?")) { store.set("mcs_refresh", null); idToken = null; showLogin(); } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && timer) { refresh(); loadHist(); if (!es) openStream(); } });
+
+// ---------- affichage ----------
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = (x, d) => x == null ? "–" : Number(x).toLocaleString("fr-FR", { minimumFractionDigits:d, maximumFractionDigits:d });
+function stateStyle(m){
+  const s = m.state || "";
+  if (s === "En marche") return ["var(--ok)","var(--okSoft)","var(--ok)"];
+  if (s === "En pause") return ["var(--warn)","var(--warnSoft)","var(--warn)"];
+  if (s === "Terminé") return ["var(--ok)","var(--okSoft)","var(--ok)"];
+  if (s.includes("erreur")) return ["var(--danger)","var(--dangerSoft)","var(--danger)"];
+  if (s === "Hors ligne") return ["var(--warn)","var(--warnSoft)","var(--warn)"];
+  return ["var(--muted)","#EEF1F5","var(--muted)"];
+}
+
+async function refresh(){
+  try {
+    const data = await dbGet("state") || {};
+    machines = data;
+    render();
+  } catch(err){
+    if (err.message === "NOLOGIN") { showLogin(); return; }
+    $("upd").textContent = "⚠ " + friendly(err.message);
+  }
+}
+
+let selected = store.get("mcs_sel"), seenHistAt = {}, histLoading = false;
+function render(){
+  // Le PC signale un nouveau graphe (changement d'étape, fin de cycle, ou toutes les 60 s) : on le recharge aussitôt
+  for (const k in machines) {
+    const ha = machines[k] && machines[k].histAt;
+    if (ha && ha !== seenHistAt[k]) { seenHistAt[k] = ha; if (!histLoading) { histLoading = true; setTimeout(() => { histLoading = false; loadHist(); }, 800); } }
+  }
+  const keys = Object.keys(machines).filter(k => machines[k] && typeof machines[k] === "object");
+  const now = Date.now();
+  // Atelier (vraies machines) d'abord ; le simulateur après. Chaque machine juge sa propre fraîcheur.
+  keys.sort((a, b) => (machines[a].sim ? 1 : 0) - (machines[b].sim ? 1 : 0) || a.localeCompare(b));
+  const real = keys.filter(k => !machines[k].sim);
+  const newestReal = Math.max(0, ...real.map(k => machines[k].updated || 0));
+  const stale = real.length > 0 && now - newestReal > 30000;
+  if (!keys.length) {
+    $("upd").textContent = "En attente de MCS Studio…"; $("tabs").classList.add("hidden");
+    $("list").innerHTML = '<div class="empty">Aucune machine reçue pour l\'instant.<br>Vérifiez dans MCS Studio : Réglages › Suivi téléphone.</div>'; return;
+  }
+  // Machine affichée : celle choisie (mémorisée sur le téléphone), sinon la première en marche, sinon la première
+  if (!selected || !machines[selected]) {
+    selected = keys.find(k => !machines[k].sim && (machines[k].running || machines[k].paused)) || keys[0];
+  }
+  const tabs = $("tabs");
+  tabs.classList.toggle("hidden", keys.length < 2);
+  tabs.innerHTML = keys.map(k => {
+    const m = machines[k], dot = stateStyle(m)[2];
+    const short = (m.name || k).replace(/ · simulateur$/, "").replace(/^MCS /, "");
+    return '<button data-sel="'+esc(k)+'" class="'+(k===selected?'on':'')+'"><span class="dot" style="background:'+dot+'"></span>MCS '+esc(short)+(m.sim?' <span class="sim">sim.</span>':'')+'</button>';
+  }).join("");
+  tabs.querySelectorAll("[data-sel]").forEach(b => b.addEventListener("click", () => { selected = b.dataset.sel; store.set("mcs_sel", selected); render(); }));
+  const m = machines[selected];
+  $("upd").textContent = m.updated ? "Mis à jour à " + new Date(m.updated).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}) : "";
+  const showStale = !m.sim && stale;
+  $("stale").classList.toggle("hidden", !showStale);
+  if (showStale) $("stale").textContent = "MCS Studio n'envoie plus rien depuis " + ago(now - newestReal) + " : PC éteint, MCS Studio fermé ou pas d'Internet à l'atelier. Dernières valeurs reçues ci-dessous.";
+  $("list").innerHTML = card(m, now - (m.updated || 0) > 30000);
+  drawChart(selected, hists[selected]);
+  document.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => askAction(b.dataset.key, b.dataset.act)));
+}
+// Glisser à gauche / à droite pour changer de machine
+(() => { let x0 = null, y0 = 0;
+  document.addEventListener("touchstart", e => { if (e.target.closest(".modal")) return; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive:true });
+  document.addEventListener("touchend", e => {
+    if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
+    const keys = Array.from(document.querySelectorAll("[data-sel]")).map(b => b.dataset.sel);
+    const i = keys.indexOf(selected); if (i < 0) return;
+    const j = i + (dx < 0 ? 1 : -1); if (j < 0 || j >= keys.length) return;
+    selected = keys[j]; store.set("mcs_sel", selected); render();
+  }, { passive:true });
+})();
+window.addEventListener("resize", () => scheduleRender());
+function ago(ms){ const m = Math.round(ms/60000); return m < 60 ? m + " min" : Math.floor(m/60) + "h" + String(m%60).padStart(2,"0"); }
+
+function card(m, stale){
+  const [fg, bg, dot] = stateStyle(m);
+  const active = m.running || m.paused;
+  const tabsShown = !$("tabs").classList.contains("hidden");
+  let h = '<div class="card">';
+  // Le nom est déjà dans l'onglet : la carte commence directement par l'état
+  h += '<div class="row">' + (tabsShown ? '' : '<span class="dot" style="background:'+dot+'"></span><span class="name">'+esc(m.name)+'</span>');
+  h += '<span class="pill" style="color:'+fg+';background:'+bg+'">'+esc(m.state)+(active && m.kind ? ' · '+esc(m.kind) : '')+'</span>'+(m.sim ? '<span class="simchip">Simulation</span>' : '')+'</div>';
+  const idp = [m.id ? '<b>'+esc(m.id)+'</b>' : '', m.ot ? 'OT N°'+esc(m.ot) : '', esc(m.battery||"")].filter(Boolean);
+  if (idp.length) h += '<div class="idl">'+idp.join(' · ')+'</div>';
+  if (!active && m.finished) {
+    const ok = m.state === "Terminé", err = (m.state||"").includes("erreur");
+    const c = ok ? "var(--ok)" : err ? "var(--danger)" : "var(--muted)";
+    const b = ok ? "var(--okSoft)" : err ? "var(--dangerSoft)" : "#F3F5F8";
+    h += '<div class="res" style="border-color:'+c+';background:'+b+'"><div class="t">'+esc(m.result || m.state)+'</div><div class="s">'+esc((m.kind||"Programme")+' '+(ok?'terminé':'arrêté')+' le '+m.finished.replace(' ',' à '))+'</div></div>';
+  }
+  if (m.v != null) {
+    h += '<div class="band"><div><div class="l">Tension</div><div class="v" style="color:var(--volt)">'+num(m.v,1)+' V</div><div class="c">'+(active?'consigne '+num(m.setV,1):'&nbsp;')+'</div></div>';
+    h += '<div><div class="l">Courant</div><div class="v" style="color:var(--amp)">'+num(m.a,1)+' A</div><div class="c">'+(active?'consigne '+num(m.setA,1):'&nbsp;')+'</div></div>';
+    h += '<div><div class="l">Température</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+' °C')+'</div><div class="c">'+(active?'batterie':'&nbsp;')+'</div></div></div>';
+  }
+  const hh = hists[m.key];
+  h += '<div class="chartbox">' + (hh && hh.length > 1 ? '<canvas id="c_'+esc(m.key)+'"></canvas>' : '<div class="empty" style="margin-top:18%">'+(active ? 'Courbe en cours de chargement…' : 'Machine au repos')+'</div>') + '</div>';
+  if (m.steps && m.steps.length) {
+    h += '<div class="steps">' + m.steps.map(s => {
+      const bgc = s.state === "next" ? (s.dis ? "var(--ampNext)" : "var(--voltNext)") : (s.dis ? "var(--ampCell)" : "var(--voltCell)");
+      const fr = s.state === "done" ? 1 : s.state === "now" ? (s.frac||0) : 0;
+      // Toujours 3 lignes (n°, type, durée) : toutes les cases ont la même hauteur et les barres sont alignées
+      const raw = String(s.text || "").replace(/^terminée$/, "terminée");
+      const t = raw.startsWith("prévue ") ? ["prévue", raw.slice(7)] : raw.includes(" / ") ? [raw.split(" / ")[0], "/ " + raw.split(" / ")[1]] : raw.includes(" · ") ? raw.split(" · ") : raw.includes(" ") ? [raw.slice(0, raw.indexOf(" ")), raw.slice(raw.indexOf(" ") + 1)] : [raw];
+      return '<div class="step"><div class="box" style="background:'+bgc+'"><span class="sh"><b>'+s.no+'</b>'+arrow(s.dis)+'</span><span>'+esc(t[0])+'</span><span>'+esc(t.slice(1).join(' · ')||'\u00a0')+'</span></div><div class="bar"><i style="width:'+Math.round(fr*100)+'%"></i></div></div>';
+    }).join("") + '</div>';
+  }
+  if (m.start) {
+    h += '<div class="times"><span>Début <b>'+esc(m.start)+'</b></span>';
+    if (m.elapsed) h += '<span>'+(active?'Écoulé':'Durée')+' <b>'+esc(m.elapsed)+'</b></span>';
+    if (active && m.end) h += '<span>Fin estimée <b>'+esc(m.end)+'</b></span>';
+    h += '</div>';
+  }
+  if (active && !stale) {
+    h += '<div class="acts">';
+    h += '<button class="stop" data-act="stop" data-key="'+esc(m.key)+'">Arrêter</button></div>';
+  }
+  if (stale && m.sim) h += '<div class="note">Simulateur fermé · dernières valeurs reçues il y a '+ago(Date.now() - (m.updated||0))+'.</div>';
+  if (pending[m.key]) h += '<div class="note">'+esc(pending[m.key])+'</div>';
+  return h + '</div>';
+}
+
+// Pastille ronde : flèche vers le bas = décharge (orange), vers le haut = restauration (bleu)
+function arrow(dis){
+  return '<svg class="arr" width="15" height="15" viewBox="0 0 16 16" aria-label="'+(dis?'Décharge':'Restauration')+'"><circle cx="8" cy="8" r="8" fill="'+(dis?'#B5642A':'#2F63A8')+'"/><path d="'+(dis?'M8 4v7M5 8.2l3 3 3-3':'M8 12V5M5 7.8l3-3 3 3')+'" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+function drawChart(key, pts){
+  const cv = document.getElementById("c_" + key); if (!cv || !pts || pts.length < 2) return;
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W*dpr; cv.height = H*dpr;
+  const g = cv.getContext("2d"); g.scale(dpr, dpr);
+  const tmax = Math.max(pts[pts.length-1][0], 0.01);
+  const padL = 40, padR = 8, padB = 16, padT = 22;
+  // 3 bandes comme sur le PC : tension, courant, température (parts de la hauteur)
+  const lanes = [["V",1,"#3A6DAE",0.42],["A",2,"#C97B36",0.33],["°C",3,"#8463B3",0.25]];
+  const X = t => padL + t / tmax * (W - padL - padR);
+  let top = padT;
+  g.font = "600 11px Nunito, sans-serif";
+  lanes.forEach(([unit, idx, col, share]) => {
+    const h = (H - padB - padT) * share, bot = top + h - 8;
+    const vals = pts.map(p => p[idx]).filter(x => x != null && !isNaN(x));
+    if (vals.length) {
+      let lo = Math.min(...vals), hi = Math.max(...vals);
+      if (unit === "A") lo = Math.min(0, lo);
+      // Échelles « rondes » comme sur le PC : pas de 5 V, 20 A, 5 °C
+      const stepU = unit === "V" ? 5 : unit === "A" ? 20 : 5;
+      lo = Math.floor(lo / stepU) * stepU; hi = Math.ceil(hi / stepU) * stepU;
+      if (hi - lo < stepU) hi = lo + stepU;
+      if (unit === "V" && hi - lo < 10) { hi += 5; lo = Math.max(0, lo - 5); }
+      const Y = v => bot - (v - lo) / (hi - lo) * (bot - top - 2);
+      g.fillStyle = col; g.fillRect(padL - 3, top, 2, bot - top);
+      g.textAlign = "right";
+      g.fillText(Math.round(hi) + " " + unit, padL - 7, top + 9);
+      g.fillText(String(Math.round(lo)), padL - 7, bot);
+      g.strokeStyle = "#EDF0F4"; g.lineWidth = 1; g.beginPath(); g.moveTo(padL, bot + 0.5); g.lineTo(W - padR, bot + 0.5); g.stroke();
+      g.beginPath(); let started = false;
+      pts.forEach(p => { const v = p[idx]; if (v == null || isNaN(v)) return; const x = X(p[0]), y = Y(v); started ? g.lineTo(x, y) : g.moveTo(x, y); started = true; });
+      g.lineTo(X(pts[pts.length-1][0]), bot); g.lineTo(X(pts[0][0]), bot); g.closePath();
+      g.globalAlpha = 0.08; g.fillStyle = col; g.fill(); g.globalAlpha = 1;
+      g.beginPath(); started = false;
+      pts.forEach(p => { const v = p[idx]; if (v == null || isNaN(v)) return; const x = X(p[0]), y = Y(v); started ? g.lineTo(x, y) : g.moveTo(x, y); started = true; });
+      g.strokeStyle = col; g.lineWidth = 1.8; g.stroke();
+      const lv = vals[vals.length - 1];
+      const lab = (unit === "°C" ? Math.round(lv) : num(lv, unit === "V" ? 1 : 0)) + " " + unit;
+      g.font = "700 11px Nunito, sans-serif"; const tw = g.measureText(lab).width + 10;
+      const ly = Math.min(Math.max(Y(lv), top + 8), bot - 2), lx = W - padR - tw;
+      g.fillStyle = col; roundRect(g, lx, ly - 8, tw, 16, 8); g.fill();
+      g.fillStyle = "#fff"; g.textAlign = "center"; g.fillText(lab, lx + tw/2, ly + 4);
+      g.font = "600 11px Nunito, sans-serif";
+    }
+    top += h;
+  });
+  // Séparateurs d'étapes et pastilles numérotées en haut (orange = décharge, bleu = restauration), comme sur le PC
+  const segs = []; let s0 = 0;
+  for (let i = 1; i <= pts.length; i++) if (i === pts.length || pts[i][4] !== pts[s0][4]) { segs.push([pts[s0][0], pts[i-1][0], pts[s0][4], i < pts.length ? pts[i][0] : pts[i-1][0]]); s0 = i; }
+  g.setLineDash([3,3]); g.strokeStyle = "#7A8696"; g.lineWidth = 1;
+  segs.slice(1).forEach(sg => { const x = X(sg[0]); g.beginPath(); g.moveTo(x, padT - 2); g.lineTo(x, H - padB); g.stroke(); });
+  g.setLineDash([]);
+  const info = (machines[key] && machines[key].steps) || [];
+  segs.forEach((sg, i) => {
+    const st = info.find(x => x.no === i + 1) || {}, x0 = X(sg[0]), x1 = X(sg[3]);
+    if (x1 - x0 < 14 || !sg[2]) return;
+    const cx = (x0 + x1) / 2, dis = st.dis;
+    g.fillStyle = dis ? "#F6E6D8" : "#E3EBF5"; g.beginPath(); g.arc(cx, 10, 8, 0, Math.PI*2); g.fill();
+    g.fillStyle = dis ? "#8A4A1A" : "#24497A"; g.font = "700 10px Nunito, sans-serif"; g.textAlign = "center"; g.fillText(String(i + 1), cx, 13.5);
+  });
+  g.fillStyle = "#5B687A"; g.font = "600 11px Nunito, sans-serif";
+  g.textAlign = "left"; g.fillText("0h", padL, H - 3);
+  g.textAlign = "center"; g.fillText(fmtH(tmax/2), (padL + W - padR)/2, H - 3);
+  g.textAlign = "right"; g.fillText(fmtH(tmax), W - padR, H - 3);
+}
+function roundRect(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x+r, y); g.arcTo(x+w, y, x+w, y+h, r); g.arcTo(x+w, y+h, x, y+h, r); g.arcTo(x, y+h, x, y, r); g.arcTo(x, y, x+w, y, r); g.closePath(); }
+function fmtH(h){ const m = Math.round(h*60); return Math.floor(m/60) + "h" + String(m%60).padStart(2,"0"); }
+
+// ---------- ordre : Arrêter seulement, avec confirmation (jamais de démarrage ni de pause à distance) ----------
+let modalCtx = null;
+function askAction(key, act){
+  const m = machines[key]; if (!m) return;
+  modalCtx = { key, act };
+  if (act !== "stop") return;
+  $("mTitle").textContent = "Arrêter " + m.name + " ?";
+  $("mText").textContent = "Le programme" + (m.id ? " de " + m.id : "") + " sera arrêté. Il ne pourra pas être relancé depuis le téléphone.";
+  $("mGo").textContent = "Arrêter";
+  $("modal").classList.remove("hidden");
+}
+$("mCancel").addEventListener("click", () => { $("modal").classList.add("hidden"); modalCtx = null; });
+$("mGo").addEventListener("click", async () => {
+  const { key, act } = modalCtx; $("modal").classList.add("hidden");
+  const at = Date.now();
+  pending[key] = "Ordre envoyé, en attente de MCS Studio (jusqu'à 20 s)…"; render();
+  try {
+    await dbPut("commands/" + key, { cmd: act, at });
+    waitResult(key, at, 0);
+  } catch(err){ pending[key] = "⚠ Envoi impossible : " + friendly(err.message); render(); }
+});
+async function waitResult(key, at, n){
+  try {
+    const c = await dbGet("commands/" + key);
+    if (c && c.at === at && c.result) {
+      pending[key] = c.result === "ok" ? "✓ Fait. MCS Studio a transmis l'ordre à la machine." : "⚠ " + c.result.charAt(0).toUpperCase() + c.result.slice(1) + ".";
+      render(); setTimeout(() => { delete pending[key]; refresh(); }, 15000); refresh(); return;
+    }
+  } catch(e){}
+  if (n >= 15) { pending[key] = "⚠ Pas de réponse de MCS Studio. Vérifiez que le PC de l'atelier est allumé."; render(); return; }
+  setTimeout(() => waitResult(key, at, n+1), 3000);
+}
+
+// ---------- démarrage ----------
+(async () => {
+  if (!store.get("mcs_refresh")) { showLogin(); return; }
+  try { await ensureToken(); showApp(); } catch(e){ showLogin(); }
+})();
+</script>
+</body>
+</html>
