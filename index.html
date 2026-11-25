@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261125202733">
+<meta name="mcs-build" content="20261125203055">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261125202733') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261125203055') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -323,7 +323,7 @@ function render(){
   $("stale").classList.toggle("hidden", !showStale);
   if (showStale) $("stale").textContent = "MCS Studio n'envoie plus rien depuis " + ago(now - newestReal) + " : PC éteint, MCS Studio fermé ou pas d'Internet à l'atelier. Dernières valeurs reçues ci-dessous.";
   $("list").innerHTML = card(m, now - (m.updated || 0) > 30000);
-  drawChart(selected, hists[selected]);
+  drawChart(selected, chartPts(machines[selected]));
   document.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => askAction(b.dataset.key, b.dataset.act)));
 }
 // Glisser à gauche / à droite pour changer de machine
@@ -340,6 +340,21 @@ function render(){
 })();
 window.addEventListener("resize", () => scheduleRender());
 // Fraîcheur des données, discrète, sur la ligne d'état : « en direct » ou « il y a 4 min »
+// Courbe = dernier graphe reçu du PC + points en direct (mesures reçues toutes les 5 s) ajoutés au bout :
+// la courbe avance en direct sans attendre le prochain envoi du graphe complet.
+const live = {};
+function chartPts(m){
+  if (!m) return null;
+  const k = m.key, base = hists[k] || [];
+  const lastH = base.length ? base[base.length-1][0] : -1;
+  let h = m.h;
+  if (h == null && m.histAt && base.length && m.updated) h = lastH + Math.max(0, m.updated - m.histAt) / 3.6e6;
+  const L = (live[k] = (live[k] || []).filter(p => p[0] > lastH));
+  if ((m.running || m.paused) && h != null && m.v != null && h > lastH && (!L.length || h > L[L.length-1][0] + 1e-6))
+    L.push([h, m.v, m.a, m.t, m.stepNo != null ? m.stepNo : (base.length ? base[base.length-1][4] : 0)]);
+  const all = base.concat(L);
+  return all.length ? all : null;
+}
 function hoursOf(t){ const r = /^(\d+)h(\d\d)$/.exec(t || ""); return r ? +r[1] + r[2]/60 : null; }
 let staleTimer = null;
 function staleHist(){ if (!staleTimer) staleTimer = setTimeout(() => { staleTimer = null; loadHist(); }, 5000); }
@@ -372,7 +387,7 @@ function card(m, stale){
     h += '<div><div class="l">Courant</div><div class="v" style="color:var(--amp)">'+num(m.a,1)+' A</div><div class="c">'+(active?'consigne '+num(m.setA,1):'&nbsp;')+'</div></div>';
     h += '<div><div class="l">Température</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+' °C')+'</div><div class="c">'+(active?'batterie':'&nbsp;')+'</div></div></div>';
   }
-  let hh = hists[m.key];
+  let hh = chartPts(m);
   // Graphe d'un autre cycle (programme relancé, graphe pas encore renvoyé par le PC) : on ne l'affiche pas
   const elH = hoursOf(m.elapsed);
   if (hh && hh.length && elH != null && hh[hh.length-1][0] > elH + 0.05) { hh = null; staleHist(); }
@@ -414,7 +429,7 @@ function drawChart(key, pts){
   const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
   cv.width = W*dpr; cv.height = H*dpr;
   const g = cv.getContext("2d"); g.scale(dpr, dpr);
-  const tmax = Math.max(pts[pts.length-1][0], 0.01);
+  const tmax = Math.max(pts[pts.length-1][0], 1/3600);
   const padL = 40, padR = 8, padB = 16, padT = 22;
   // 3 bandes comme sur le PC : tension, courant, température (parts de la hauteur)
   const lanes = [["V",1,"#3A6DAE",0.42],["A",2,"#C97B36",0.33],["°C",3,"#8463B3",0.25]];
