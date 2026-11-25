@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261125200424">
+<meta name="mcs-build" content="20261125200653">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261125200424') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261125200653') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -34,9 +34,9 @@
 *{box-sizing:border-box}
 html,body{margin:0;background:#fff;color:var(--text);font-family:Nunito,system-ui,sans-serif;-webkit-text-size-adjust:100%}
 /* iPhone : la page commence sous la barre d'état (pas de contenu dessous, donc pas de flou iOS) */
-body{padding-top:6px}
+body{padding-top:0}
 #appView{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:640px;margin:0 auto;padding:0 8px}
-header{display:flex;align-items:center;justify-content:space-between;padding:8px 4px 6px;gap:8px}
+header{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 4px;gap:8px}
 header .sub{font-size:12px;color:var(--muted)}
 .link{border:0;background:none;color:var(--muted);font:600 13px Nunito,sans-serif;padding:6px 2px}
 .tabs{display:flex;gap:4px;background:#E8ECF1;border-radius:12px;padding:3px;margin-bottom:8px}
