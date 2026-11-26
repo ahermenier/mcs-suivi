@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126183118">
+<meta name="mcs-build" content="20261126184003">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126183118') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126184003') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -272,7 +272,10 @@ function applyAt(path, data, merge){
   else if (merge && typeof o[last] === "object") Object.assign(o[last], data);
   else o[last] = data;
 }
-function scheduleRender(){ if (renderPending) return; renderPending = true; requestAnimationFrame(() => { renderPending = false; render(); }); }
+// Doigt posé sur le graphique : la page n'est pas reconstruite (sinon le graphique touché est remplacé et le curseur
+// ne suit plus le doigt au bout de quelques secondes, constaté le 26/11/2026) ; mise à jour dès que le doigt est levé
+let touching = false, renderWaiting = false;
+function scheduleRender(){ if (touching) { renderWaiting = true; return; } if (renderPending) return; renderPending = true; requestAnimationFrame(() => { renderPending = false; render(); }); }
 async function loadHist(){ try { hists = await dbGet("hist") || {}; scheduleRender(); } catch(e){} }
 
 $("loginForm").addEventListener("submit", async e => {
@@ -327,6 +330,7 @@ async function refresh(){
 
 let selected = store.get("mcs_sel"), seenHistAt = {}, histLoading = false;
 function render(){
+  if (touching) { renderWaiting = true; return; }
   // Le PC signale un nouveau graphe (changement d'étape, fin de cycle, ou toutes les 60 s) : on le recharge aussitôt
   for (const k in machines) {
     const ha = machines[k] && machines[k].histAt;
@@ -675,9 +679,11 @@ function cursorOff(delay){
   cursorTimer = setTimeout(() => { const k = cursor && cursor.key; cursor = null; if (k && machines[k]) drawChart(k, chartPts(machines[k])); }, delay);
 }
 // un doigt = curseur ; deux doigts = zoom normal (le curseur s'efface)
-document.addEventListener("touchstart", e => { const cv = e.target.closest && e.target.closest("canvas[id^='c_']"); if (cv && e.touches.length === 1) cursorAt(e, cv); else if (cursor) cursorOff(0); }, { passive: true });
+document.addEventListener("touchstart", e => { const cv = e.target.closest && e.target.closest("canvas[id^='c_']"); if (cv && e.touches.length === 1) { touching = true; cursorAt(e, cv); } else { touching = false; if (cursor) cursorOff(0); } }, { passive: true });
+const touchDone = () => { if (!touching) return; touching = false; if (renderWaiting) { renderWaiting = false; scheduleRender(); } };
+document.addEventListener("touchcancel", () => { touchDone(); if (cursor) cursorOff(4000); }, { passive: true });
 document.addEventListener("touchmove", e => { const cv = e.target.closest && e.target.closest("canvas[id^='c_']"); if (cv && e.touches.length === 1 && cursor) { e.preventDefault(); cursorAt(e, cv); } }, { passive: false });
-document.addEventListener("touchend", e => { if (cursor) cursorOff(4000); }, { passive: true });
+document.addEventListener("touchend", e => { touchDone(); if (cursor) cursorOff(4000); }, { passive: true });
 document.addEventListener("mousedown", e => { const cv = e.target.closest && e.target.closest("canvas[id^='c_']"); if (cv) { cursorAt(e, cv); cursorOff(4000); } });
 function roundRect(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x+r, y); g.arcTo(x+w, y, x+w, y+h, r); g.arcTo(x+w, y+h, x, y+h, r); g.arcTo(x, y+h, x, y, r); g.arcTo(x, y, x+w, y, r); g.closePath(); }
 function fmtH(h){ const m = Math.round(h*60); if (h < 1) return h*3600 < 60 ? Math.round(h*3600) + "s" : Math.max(1, m) + "min"; return Math.floor(m/60) + "h" + String(m%60).padStart(2,"0"); }
