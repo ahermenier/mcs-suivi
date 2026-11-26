@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126175758">
+<meta name="mcs-build" content="20261126180938">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126175758') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126180938') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -520,7 +520,7 @@ function arrow(dis){
 }
 // Graphique dessiné comme celui du PC : 3 bandes (tension 45 %, courant 33 %, température 22 %, écart 6 %),
 // échelles envoyées par le PC (même calcul), graduations et repères de temps identiques, pastilles d'étapes en haut.
-const LANES = [["V",1,"#2F64A8",0.45],["A",2,"#B86A28",0.33],["°C",3,"#7556A8",0.22]], GAP = 0.06;
+const LANES = [["V",1,"#2F64A8",0.45],["A",2,"#B86A28",0.33],["°C",3,"#7556A8",0.22]], GAP = 0.035;
 function niceStep(xmax){ const st=[10/3600,30/3600,1/60,2/60,5/60,0.25,0.5,1,2,4,6,12,24,48]; for (const s of st) if (xmax/s <= 10) return s; return 96; }
 function hourLabel(x, step){
   if (step >= 1) return Math.round(x) + "h";
@@ -556,10 +556,14 @@ function drawChart(key, pts){
   // repères de temps (tracés avant les courbes pour ne pas les hachurer)
   const step = niceStep(xmax); g.font = "400 10.5px " + MONO; g.fillStyle = "#666"; g.textBaseline = "alphabetic";
   const every = Math.max(1, Math.ceil((xmax / step + 1) / 6));   // au plus 6 libellés sur un téléphone
+  // 3 mini-graphes (26/11/2026) : les traits verticaux s'arrêtent à chaque bande, rien dans les intervalles
+  const bandsY = []; { const tw = LANES.reduce((a, l) => a + l[3], 0), av = 1 - GAP * (LANES.length - 1); let ps = 0;
+    LANES.forEach(l => { const hg = av * l[3] / tw; bandsY.push([padT + ph * ps, padT + ph * (ps + hg)]); ps += hg + GAP; }); }
+  const vline = (x) => bandsY.forEach(([t, b]) => { g.beginPath(); g.moveTo(x, t); g.lineTo(x, b); g.stroke(); });
   let k = 0;
   for (let x = 0; x <= xmax + 1e-9; x += step, k++) {
     const px = X(x);
-    g.strokeStyle = grid; g.beginPath(); g.moveTo(px + 0.5, padT); g.lineTo(px + 0.5, H - padB); g.stroke();
+    g.strokeStyle = grid; vline(px + 0.5);
     if (k % every === 0) { g.textAlign = k === 0 ? "left" : "center"; g.fillText(hourLabel(x, step), px, H - 4); }
   }
   // bandes
@@ -603,7 +607,7 @@ function drawChart(key, pts){
   const segs = []; let s0 = 0;
   for (let i = 1; i <= pts.length; i++) if (i === pts.length || pts[i][4] !== pts[s0][4]) { segs.push([pts[s0][0], i < pts.length ? pts[i][0] : pts[i-1][0], pts[s0][4]]); s0 = i; }
   g.setLineDash([3,3]); g.strokeStyle = "#8A94A3"; g.lineWidth = 1;
-  segs.slice(1).forEach(sg => { const x = X(sg[0]); g.beginPath(); g.moveTo(x, padT - 4); g.lineTo(x, H - padB); g.stroke(); });
+  segs.slice(1).forEach(sg => { const x = X(sg[0]); g.beginPath(); g.moveTo(x, padT - 4); g.lineTo(x, padT); g.stroke(); vline(x); });
   g.setLineDash([]);
   const info = m.steps || [];
   segs.forEach(sg => {
