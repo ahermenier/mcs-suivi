@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- Seuls les scripts de cette page s'exécutent : pas de bandeau publicitaire ajouté par l'hébergeur -->
-<meta http-equiv="Content-Security-Policy" content="script-src 'unsafe-inline'">
+<meta http-equiv="Content-Security-Policy" content="script-src 'unsafe-inline' 'self'; worker-src 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126192847">
+<meta name="mcs-build" content="20261126194506">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126192847') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126194506') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -138,6 +138,55 @@ input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   .times{font-size:12px}.note{font-size:12px;margin-top:4px}
   .acts button{height:40px}
 }
+.rapbtn{width:34px;justify-content:center;color:var(--ink)}
+#rapView{position:fixed;inset:0;background:#fff;z-index:15;display:flex;flex-direction:column;max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 28px) 12px calc(8px + env(safe-area-inset-bottom))}
+.rtop{display:flex;align-items:flex-end;gap:8px;border-bottom:1px solid var(--rule);padding-bottom:7px;margin-bottom:10px}
+.rtop .back{border:0;background:none;color:var(--blue);font:600 16px var(--sans);padding:0 6px 0 0;display:flex;align-items:center;gap:2px;height:28px}
+.rtop h2{flex:1;margin:0;font-size:19px;font-weight:700;text-align:center;padding-right:58px}
+.rsearch{position:relative;margin-bottom:8px}
+.rsearch input{height:42px;padding-left:36px;font-size:16px;border-radius:4px}
+.rsearch svg{position:absolute;left:11px;top:12px;color:var(--muted)}
+.rfil{display:flex;gap:6px;margin-bottom:6px}
+.rfil button{border:1px solid var(--line);background:#fff;border-radius:14px;height:28px;padding:0 11px;font:500 13.5px var(--sans);color:var(--muted)}
+.rfil button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.rcount{font:400 12.5px var(--sans);color:var(--muted);margin:2px 0 4px}
+.rlist{flex:1;overflow:auto;margin:0 -12px;padding:0 12px}
+.rmon{font:600 11.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:12px 0 4px;border-bottom:1px solid var(--line)}
+.ritem{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.ritem .d{width:44px;flex:none;font-size:13px;color:var(--muted);line-height:1.2}
+.ritem .d b{display:block;font-size:17px;color:var(--ink);font-weight:600}
+.ritem .w{flex:1;min-width:0}
+.ritem .w b{display:block;font-size:16.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ritem .w b .rsim{display:inline}
+.ritem .w span{display:block;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ritem .r{text-align:right;flex:none}
+.ritem .r b{display:block;font-size:16.5px;font-weight:600}
+.ritem .r span{font-size:12.5px;color:var(--muted)}
+.ok{color:var(--ok)}.wn{color:var(--warn)}.mu{color:var(--muted)}
+.ritem .chev{color:#B4BAC3;flex:none}
+.bhead{margin:2px 0 8px}.bhead b{font-size:21px;font-weight:700}.bhead span{display:block;font-size:13.5px;color:var(--muted);margin-top:2px}
+.bars{display:flex;align-items:flex-end;gap:10px;height:108px;border-bottom:1px solid var(--rule);position:relative;margin:10px 0 4px;padding:0 4px}
+.bars .th{position:absolute;left:0;right:0;border-top:1.5px dashed var(--danger);opacity:.7}
+.bars .th i{position:absolute;right:0;top:-15px;font:500 11px var(--sans);color:var(--danger);font-style:normal}
+.bars div.b{flex:1;max-width:84px;background:#C9D6E8;position:relative}
+.bars div.b.cur{background:var(--blue)}
+.bars div.b span{position:absolute;top:-21px;left:50%;transform:translateX(-50%);padding:0 4px;background:#fff;white-space:nowrap;font:600 14px var(--sans);color:var(--ink);z-index:1}
+.blab{display:flex;gap:10px;padding:0 4px;margin-bottom:6px}.blab span{flex:1;max-width:84px;text-align:center;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.pitem{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.pitem .w{flex:1;min-width:0}.pitem .w b{display:block;font-size:15.5px;font-weight:600}.pitem .w span{display:block;font-size:12.5px;color:var(--muted)}
+.pitem .pdf{border:1px solid var(--blue);color:var(--blue);background:#fff;border-radius:4px;height:36px;padding:0 12px;font:600 14px var(--sans);display:flex;align-items:center;gap:6px}
+.pitem .ml{border:1px solid var(--blue);color:var(--blue);background:#fff;border-radius:4px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;padding:0}
+.rnote{font-size:12.5px;color:var(--muted);margin-top:8px}
+.rload{text-align:center;color:var(--muted);margin-top:30vh;font-size:15px}
+.ritem{cursor:pointer}.rsim{font:500 10px var(--sans);color:#8A8A8A;letter-spacing:.04em;margin-left:4px}
+#rapMsg{font-size:13px;color:var(--muted);margin:6px 0 0;min-height:0}
+#pdfView{position:fixed;inset:0;background:#E9ECF0;z-index:25;display:flex;flex-direction:column}
+#pdfView .ptop{display:flex;align-items:flex-end;gap:8px;background:#fff;border-bottom:1px solid var(--rule);padding:calc(env(safe-area-inset-top) + 28px) 12px 8px}
+#pdfView .ptop .back{border:0;background:none;color:var(--blue);font:600 16px var(--sans);padding:0;height:28px}
+#pdfView .ptop b{flex:1;text-align:center;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pdfView .ptop .share{border:0;background:none;color:var(--blue);font:600 16px var(--sans);padding:0;height:28px}
+#pdfPages{flex:1;overflow:auto;padding:10px 8px calc(10px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+#pdfPages canvas{position:static;display:block;width:100%;height:auto;margin:0 auto 10px;box-shadow:0 1px 4px rgba(0,0,0,.15);background:#fff;touch-action:auto}
 .band>div{text-align:center}.band>div:first-child{padding-left:8px}
 .step .box{text-align:center}.step .box .sh{justify-content:center}
 </style>
@@ -161,6 +210,7 @@ input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   <div class="topbar">
     <div id="tabs" class="tabs hidden"></div>
     <div id="single" class="single hidden"></div>
+    <button class="out rapbtn" id="rapBtn" aria-label="Rapports" title="Rapports"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg></button>
     <button class="out" id="logoutBtn" aria-label="Déconnexion" title="Déconnexion"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l5-5-5-5"/><path d="M15 12H4"/></svg></button>
   </div>
   <div class="sub hidden" id="upd"></div>
@@ -171,6 +221,8 @@ input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 </div>
 
 <div id="curBar" class="hidden"></div>
+<div id="rapView" class="hidden"></div>
+<div id="pdfView" class="hidden"><div class="ptop"><button class="back" id="pdfBack">‹ Retour</button><b id="pdfTitle"></b><button class="share" id="pdfShare">Partager</button></div><div id="pdfPages"></div></div>
 <div id="modal" class="modal hidden">
   <div class="sheet">
     <h2 id="mTitle">Arrêter</h2>
@@ -342,6 +394,8 @@ async function refresh(){
 let selected = store.get("mcs_sel"), seenHistAt = {}, histLoading = false;
 function render(){
   if (touching) { renderWaiting = true; return; }
+  // Écran Rapports ouvert : le suivi du mail y est recopié
+  for (const k in pending) if (k === (modalCtx && modalCtx.key) && modalCtx.fromRap) rapNote(pending[k]);
   // Le PC signale un nouveau graphe (changement d'étape, fin de cycle, ou toutes les 60 s) : on le recharge aussitôt
   for (const k in machines) {
     const ha = machines[k] && machines[k].histAt;
@@ -822,6 +876,147 @@ async function waitResult(key, at, n){
   }
   setTimeout(() => waitResult(key, at, n+1), 3000);
 }
+
+
+// ================= Rapports (26/11/2026) : tous les rapports archivés par le PC dans Firebase, même PC éteint =================
+let rapIdx = null, rapQ = "", rapF = 0, rapLoading = false, rapScreen = "list", rapParc = null;
+const MOIS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+const MOISC = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+const normP = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+const sameParc = (a, b) => { const na = normP(a); return na.length > 0 && /\d/.test(na) && na === normP(b); };
+async function rapLoad(){
+  rapLoading = true; rapDraw();
+  try {
+    const [r, sr] = await Promise.all([dbGet("reports"), dbGet("simReports")]);
+    const list = [];
+    for (const [id, v] of Object.entries(r || {})) if (v && v.f) list.push({ id, ...v, sim: false });
+    for (const [id, v] of Object.entries(sr || {})) if (v && v.f) list.push({ id, ...v, sim: true });
+    list.sort((a, b) => (b.d || 0) - (a.d || 0));
+    rapIdx = list;
+  } catch(e){ rapIdx = rapIdx || []; $("rapMsg") && ($("rapMsg").textContent = "⚠ " + friendly(e.message)); }
+  rapLoading = false; rapDraw();
+}
+function rapOpen(){ rapScreen = "list"; $("rapView").classList.remove("hidden"); rapDraw(); rapLoad(); }
+function rapClose(){ $("rapView").classList.add("hidden"); }
+const pcClass = r => r.pc == null ? "mu" : r.pc >= 80 ? "ok" : "wn";
+const chev = '<svg class="chev" width="8" height="14" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>';
+function rapRowRight(r){
+  if (r.it) return '<div class="r"><b class="mu">Interrompu</b></div>';
+  if (r.pc != null) return '<div class="r"><b class="'+pcClass(r)+'">'+r.pc+' %</b><span>'+esc((r.au || "") + (r.c5 ? " C5" : ""))+'</span></div>';
+  return '<div class="r"><b class="mu">'+esc(r.mo || "—")+'</b></div>';
+}
+function rapList(){
+  const machinesTxt = ["Tous", ...[...new Set((rapIdx || []).map(r => r.mc).filter(Boolean))].sort()];
+  const q = normP(rapQ), qt = rapQ.trim().toUpperCase();
+  const rows = (rapIdx || []).filter(r => (rapF === 0 || r.mc === machinesTxt[rapF])
+    && (!q || normP(r.pa).includes(q) || normP(r.ot).includes(q) || (qt && String(r.ma || "").toUpperCase().includes(qt))));
+  let h = '<div class="rtop"><button class="back" data-r="close">‹ Retour</button><h2>Rapports</h2></div>'
+    + '<div class="rsearch"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>'
+    + '<input id="rapSearch" type="search" placeholder="N° parc, OT ou marque" autocomplete="off" autocorrect="off" autocapitalize="characters" value="'+esc(rapQ)+'"></div>'
+    + '<div class="rfil">'+machinesTxt.map((f, i) => '<button data-f="'+i+'" class="'+(i === rapF ? 'on' : '')+'">'+esc(f)+'</button>').join("")+'</div>'
+    + '<div class="rcount">'+(rapLoading && !rapIdx ? "Chargement…" : (rapQ ? rows.length + ' rapport'+(rows.length > 1 ? 's' : '')+' pour « '+esc(rapQ)+' »' : (rapIdx || []).length.toLocaleString("fr-FR") + ' rapports') + ' · disponibles même PC éteint')+'</div>'
+    + '<div id="rapMsg"></div><div class="rlist">';
+  if (!rapIdx && rapLoading) h += '<div class="rload">Chargement des rapports…</div>';
+  else if (!rows.length) h += '<div class="rload">'+(rapQ ? 'Aucun rapport pour « '+esc(rapQ)+' »' : 'Aucun rapport archivé pour l\'instant.<br>Le PC les copie au fil de l\'eau (Paramètres › Rapports sur le téléphone).')+'</div>';
+  let mon = "";
+  rows.slice(0, 400).forEach(r => {
+    const d = new Date(r.d || 0), mk = d.getFullYear() + "-" + d.getMonth();
+    if (mk !== mon) { mon = mk; h += '<div class="rmon">'+MOIS[d.getMonth()]+' '+d.getFullYear()+'</div>'; }
+    h += '<div class="ritem" data-id="'+esc(r.id)+'"><div class="d"><b>'+d.getDate()+'</b>'+MOISC[d.getMonth()]+'</div>'
+      + '<div class="w"><b>'+esc([r.ma, r.pa].filter(Boolean).join(" ") || r.f.replace(/\.csv$/i, ""))+(r.sim ? '<span class="rsim">SIM</span>' : '')+'</b><span>'+esc([r.ot ? "OT " + r.ot : null, r.mc].filter(Boolean).join(" · "))+'</span></div>'
+      + rapRowRight(r) + chev + '</div>';
+  });
+  if (rows.length > 400) h += '<div class="rnote">… '+(rows.length - 400)+' de plus : précisez la recherche.</div>';
+  return h + '</div>';
+}
+function rapBatt(){
+  const one = (rapIdx || []).find(r => r.id === rapParc) || {};
+  const pas = one.pa ? (rapIdx || []).filter(r => sameParc(r.pa, one.pa) && r.sim === one.sim) : [one];
+  pas.sort((a, b) => (a.d || 0) - (b.d || 0));
+  const withPc = pas.filter(r => r.pc != null && !r.it).slice(-6);
+  const last = withPc[withPc.length - 1], prev = withPc[withPc.length - 2];
+  const dd = d => { const x = new Date(d || 0); return String(x.getDate()).padStart(2, "0") + "/" + String(x.getMonth() + 1).padStart(2, "0"); };
+  let h = '<div class="rtop"><button class="back" data-r="list">‹ Rapports</button><h2>Batterie</h2></div><div class="rlist">'
+    + '<div class="bhead"><b>'+esc([one.ma, one.pa].filter(Boolean).join(" ") || one.f)+'</b><span>'+esc([one.bt, pas.length + ' passage' + (pas.length > 1 ? 's' : '')].filter(Boolean).join(" · "))+'</span></div>';
+  if (withPc.length) {
+    h += '<div class="bars"><div class="th" style="bottom:80%"><i>seuil 80 %</i></div>'+withPc.map(r => '<div class="b'+(r === last ? ' cur' : '')+'" style="height:'+Math.max(2, Math.min(100, r.pc))+'%"><span>'+r.pc+' %</span></div>').join("")+'</div>'
+      + '<div class="blab">'+withPc.map(r => '<span>'+dd(r.d)+'/'+new Date(r.d || 0).getFullYear()+'</span>').join("")+'</div>';
+    if (prev) { const dlt = last.pc - prev.pc;
+      h += '<div class="rnote" style="margin:0 0 6px;font-weight:600;color:var(--'+(last.pc >= 80 ? 'muted' : 'warn')+')">'+(dlt === 0 ? 'Stable' : (dlt > 0 ? '+' : '−') + Math.abs(dlt) + ' point' + (Math.abs(dlt) > 1 ? 's' : ''))+' depuis le passage du '+dd(prev.d)+(last.pc < 80 ? ' · sous le seuil de réforme' : '')+'</div>'; }
+  }
+  [...pas].reverse().forEach(r => {
+    const d = new Date(r.d || 0), ds = dd(r.d) + "/" + d.getFullYear();
+    const res = r.it ? '<em style="font-style:normal;color:var(--muted)">interrompu</em>' : r.pc != null ? '<em style="font-style:normal;color:var(--'+(r.pc >= 80 ? 'ok' : 'warn')+')">'+(r.ah != null ? r.ah + ' Ah · ' : '')+r.pc+' %</em>' : '';
+    h += '<div class="pitem"><div class="w"><b>'+ds+(res ? ' · ' + res : '')+'</b><span>'+esc([r.ot ? "OT " + r.ot : null, r.ma, r.au ? "autonomie " + r.au + (r.c5 ? " C5" : "") : r.mo, r.mc].filter(Boolean).join(" · "))+'</span></div>'
+      + (r.pdf ? '<button class="pdf" data-pdf="'+esc(r.id)+'"><svg width="14" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>PDF</button>' : '')
+      + '<button class="ml" data-mail="'+esc(r.id)+'" aria-label="Envoyer le rapport par mail"><svg width="20" height="15" viewBox="0 0 18 14" aria-hidden="true"><rect x="1" y="1" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.8 2l7.2 5.6L16.2 2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></div>';
+  });
+  return h + '<div id="rapMsg"></div></div>';
+}
+function rapDraw(){
+  const v = $("rapView"); if (v.classList.contains("hidden")) return;
+  const hadFocus = document.activeElement && document.activeElement.id === "rapSearch", sel = hadFocus ? document.activeElement.selectionStart : 0;
+  v.innerHTML = rapScreen === "batt" ? rapBatt() : rapList();
+  v.querySelectorAll("[data-r]").forEach(b => b.addEventListener("click", () => { if (b.dataset.r === "close") rapClose(); else { rapScreen = "list"; rapDraw(); } }));
+  v.querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => { rapF = +b.dataset.f; rapDraw(); }));
+  v.querySelectorAll(".ritem[data-id]").forEach(b => b.addEventListener("click", () => { rapParc = b.dataset.id; rapScreen = "batt"; rapDraw(); v.querySelector(".rlist") && (v.querySelector(".rlist").scrollTop = 0); }));
+  v.querySelectorAll("[data-pdf]").forEach(b => b.addEventListener("click", () => openPdf(b.dataset.pdf)));
+  v.querySelectorAll("[data-mail]").forEach(b => b.addEventListener("click", () => rapMail(b.dataset.mail)));
+  const si = $("rapSearch");
+  if (si) { si.addEventListener("input", () => { rapQ = si.value; rapDraw(); }); if (hadFocus) { si.focus(); try { si.setSelectionRange(sel, sel); } catch(e){} } }
+}
+function rapNote(t){ const n = $("rapMsg"); if (n) n.textContent = t; }
+// Envoi par mail d'un rapport archivé : mêmes destinataires que sur le PC, c'est le PC qui envoie (il doit être joignable)
+function rapMail(id){
+  const r = (rapIdx || []).find(x => x.id === id); if (!r) return;
+  const key = Object.keys(machines).find(k => machines[k] && machines[k].report && machines[k].report.recips && machines[k].report.recips.length && !!machines[k].sim === r.sim);
+  if (!key || isStale(machines[key])) { rapNote("⚠ L'envoi par mail passe par le PC de l'atelier : il n'est pas joignable pour l'instant."); return; }
+  const base = machines[key].report, env = String(r.env || "").split(/\r?\n/).filter(Boolean).map(l => l.split("|"));
+  const recips = base.recips.map(x => { const hit = env.filter(e => (e[1] || "").trim().toLowerCase() === String(x.mail).trim().toLowerCase()).pop();
+    let last = null; if (hit) { const t = new Date(hit[0].replace(" ", "T")); if (!isNaN(t)) last = (w => w.charAt(0).toUpperCase() + w.slice(1))(t.toLocaleDateString("fr-FR", { weekday: "short" })) + " " + String(t.getDate()).padStart(2, "0") + "/" + String(t.getMonth() + 1).padStart(2, "0") + " " + String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0"); }
+    return { ...x, last }; });
+  modalCtx = { key, act: "mail", fromRap: true };
+  $("mList").classList.add("hidden"); $("mGo").className = "go"; $("mGo").disabled = false;
+  askMail({ id: [r.ma, r.pa].filter(Boolean).join(" "), ot: r.ot, finished: null, report: { file: r.f, ok: base.ok, recips } });
+  const d = new Date(r.d || 0); $("mText").textContent += (r.d ? " · cycle du " + String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear() : "");
+}
+// Lecteur PDF dans l'appli (pdf.js) : le vrai rapport, page par page, net au zoom ; « Partager » pour l'enregistrer ou l'envoyer
+let pdfLib = null, pdfBlob = null, pdfName = "";
+function loadPdfLib(){
+  if (pdfLib) return Promise.resolve(pdfLib);
+  return new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "pdfjs/pdf.min.js";   // pdf.js 3.11.174 (Mozilla, Apache 2.0), hébergé avec la page
+    sc.onload = () => { pdfLib = window.pdfjsLib; pdfLib.GlobalWorkerOptions.workerSrc = "pdfjs/pdf.worker.min.js"; ok(pdfLib); };
+    sc.onerror = () => ko(new Error("lecteur PDF indisponible (pas d'Internet ?)")); document.head.appendChild(sc); });
+}
+async function openPdf(id){
+  const r = (rapIdx || []).find(x => x.id === id); if (!r) return;
+  pdfName = r.f.replace(/\.csv$/i, ".pdf");
+  $("pdfTitle").textContent = [r.ma, r.pa].filter(Boolean).join(" ") || pdfName;
+  $("pdfPages").innerHTML = '<div class="rload" style="margin-top:25vh">Chargement du rapport…</div>';
+  $("pdfView").classList.remove("hidden");
+  try {
+    const [lib, b64] = await Promise.all([loadPdfLib(), dbGet((r.sim ? "simReportFiles/" : "reportFiles/") + id + "/pdf")]);
+    if (!b64) throw new Error("rapport PDF absent");
+    const bin = atob(b64), bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    pdfBlob = new Blob([bytes], { type: "application/pdf" });
+    const doc = await lib.getDocument({ data: bytes }).promise;
+    $("pdfPages").innerHTML = "";
+    const w = $("pdfPages").clientWidth - 16, q = Math.min(4, (window.devicePixelRatio || 1) * 2);
+    for (let n = 1; n <= doc.numPages; n++) {
+      const page = await doc.getPage(n), vp0 = page.getViewport({ scale: 1 }), vp = page.getViewport({ scale: w / vp0.width * q });
+      const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height; $("pdfPages").appendChild(c);
+      await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+    }
+  } catch(e){ $("pdfPages").innerHTML = '<div class="rload" style="margin-top:25vh">⚠ '+esc(friendly(e.message))+'</div>'; }
+}
+$("pdfBack").addEventListener("click", () => { $("pdfView").classList.add("hidden"); $("pdfPages").innerHTML = ""; });
+$("pdfShare").addEventListener("click", async () => {
+  if (!pdfBlob) return;
+  const file = new File([pdfBlob], pdfName, { type: "application/pdf" });
+  try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: pdfName }); return; } } catch(e){ if (e.name === "AbortError") return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(pdfBlob); a.download = pdfName; a.click();
+});
+$("rapBtn").addEventListener("click", rapOpen);
 
 // ---------- démarrage ----------
 (async () => {
