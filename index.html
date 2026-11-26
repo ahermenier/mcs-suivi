@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126173528">
+<meta name="mcs-build" content="20261126175705">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126173528') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126175705') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -538,9 +538,17 @@ function drawChart(key, pts){
   const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
   cv.width = W*dpr; cv.height = H*dpr;
   const g = cv.getContext("2d"); g.scale(dpr, dpr);
-  const padL = 44, padR = 8, padT = 24, padB = 18;
-  const pw = W - padL - padR, ph = H - padT - padB;
+  const padR = 8, padT = 24, padB = 18, ph = H - padT - padB;
   const sc = Array.isArray(m.sc) ? m.sc : null;
+  // Marge gauche juste à la largeur des graduations (26/11/2026 : « serrer à gauche ») : plus de place pour les courbes
+  const laneRange = (li, idx) => { if (sc) return [sc[li*2], sc[li*2+1]]; const vals = pts.map(p => p[idx]).filter(x => x != null); let mn = Math.min(...vals), mx = Math.max(...vals); if (mx - mn < 1) { mx += 1; mn -= 1; } return [mn, mx]; };
+  g.font = "500 10.5px IBM Plex Sans Condensed, system-ui, sans-serif";
+  let labW = 0;
+  { const tw = LANES.reduce((a, l) => a + l[3], 0), av = 1 - GAP * (LANES.length - 1);
+    LANES.forEach(([unit, idx, , wgt], li) => { const hh = ph * av * wgt / tw, n = hh >= 150 ? 4 : hh >= 60 ? 2 : 1, [mn, mx] = laneRange(li, idx);
+      for (let i = 0; i <= n; i++) labW = Math.max(labW, g.measureText(axisLabel(mn, mx, i, n, unit)).width); }); }
+  const padL = Math.ceil(labW) + 6;
+  const pw = W - padL - padR;
   const lastX = pts[pts.length-1][0];
   const xmax = Math.max(sc ? sc[6] : lastX, lastX, 1/60);
   const X = t => padL + Math.min(t, xmax) / xmax * pw;
@@ -559,16 +567,14 @@ function drawChart(key, pts){
   let pos = 0; const pills = [];   // pastilles de valeur dessinées en dernier (par-dessus les séparateurs)
   LANES.forEach(([unit, idx, col, wgt], li) => {
     const hgt = avail * wgt / totalW, top = padT + ph * pos, bot = padT + ph * (pos + hgt); pos += hgt + GAP;
-    let mn, mx;
-    if (sc) { mn = sc[li*2]; mx = sc[li*2+1]; }
-    else { const vals = pts.map(p => p[idx]).filter(x => x != null); mn = Math.min(...vals); mx = Math.max(...vals); if (mx - mn < 1) { mx += 1; mn -= 1; } }
+    const [mn, mx] = laneRange(li, idx);
     const Y = v => bot - (v - mn) / (mx - mn) * (bot - top);
     const n = (bot - top) >= 150 ? 4 : (bot - top) >= 60 ? 2 : 1;
     g.font = "500 10.5px " + MONO; g.textAlign = "right"; g.textBaseline = "middle";
     for (let i = 0; i <= n; i++) {
       const y = top + (bot - top) * i / n;
       g.strokeStyle = grid; g.lineWidth = 1; g.beginPath(); g.moveTo(padL, y + 0.5); g.lineTo(W - padR, y + 0.5); g.stroke();
-      g.fillStyle = col; g.fillText(axisLabel(mn, mx, i, n, unit), padL - 6, Math.min(Math.max(y, top + 6), bot - 6));   // reste dans sa bande : pas de chevauchement avec la bande voisine
+      g.fillStyle = col; g.fillText(axisLabel(mn, mx, i, n, unit), padL - 4, Math.min(Math.max(y, top + 6), bot - 6));   // reste dans sa bande : pas de chevauchement avec la bande voisine
     }
     const line = () => { g.beginPath(); let st = false; pts.forEach(p => { const v = p[idx]; if (v == null || isNaN(v)) return; const x = X(p[0]), y = Math.max(top, Math.min(bot, Y(v))); st ? g.lineTo(x, y) : g.moveTo(x, y); st = true; }); };
     line(); g.strokeStyle = col; g.lineWidth = 1.6; g.lineJoin = "round"; g.stroke();
