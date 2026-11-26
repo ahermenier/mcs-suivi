@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126134200">
+<meta name="mcs-build" content="20261126140306">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126134200') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126140306') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -569,6 +569,14 @@ function askAction(key, act){
   $("modal").classList.remove("hidden");
 }
 $("mCancel").addEventListener("click", () => { $("modal").classList.add("hidden"); modalCtx = null; });
+// Heure d'un ordre exprimée à l'horloge du PC (26/11/2026) : le PC refuse un ordre trop ancien, et l'horloge du PC de
+// l'atelier peut avancer de plusieurs minutes sur celle du téléphone (« refusé : demande trop ancienne »). Le PC écrit son
+// heure (« updated ») toutes les 5 s ; on s'y cale, à ±3 s près.
+function pcNow(key){
+  const m = machines[key], now = Date.now();
+  const skew = m && m.updated && Math.abs(now - m.updated) > 15000 ? m.updated + 2500 - now : 0;
+  return now + skew;
+}
 // ---------- envoi du rapport : choix parmi les destinataires réglés sur le PC, le PC envoie ----------
 function askMail(m){
   const r = m.report;
@@ -586,7 +594,7 @@ function askMail(m){
 async function sendMail(key, file){
   const to = Array.from($("mList").querySelectorAll("input:checked")).map(i => +i.value);
   if (!to.length) return;
-  const at = Date.now();
+  const at = pcNow(key);
   pending[key] = "Demande envoyée au PC de l'atelier…"; render();
   try { await dbPut("mailreq/" + key, { at, file, to }); waitMail(key, at, 0); }
   catch(err){ pending[key] = "⚠ Envoi impossible : " + friendly(err.message); render(); }
@@ -612,7 +620,7 @@ async function waitMail(key, at, n){
 $("mGo").addEventListener("click", async () => {
   const { key, act } = modalCtx; $("modal").classList.add("hidden");
   if (act === "mail") { sendMail(key, modalCtx.file); return; }
-  const at = Date.now();
+  const at = pcNow(key);
   pending[key] = "Ordre envoyé, en attente de MCS Studio (jusqu'à 20 s)…"; render();
   try {
     await dbPut("commands/" + key, { cmd: act, at });
