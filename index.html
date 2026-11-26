@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126205329">
+<meta name="mcs-build" content="20261126211227">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126205329') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126211227') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -568,7 +568,9 @@ function card(m, stale){
     const ok = m.state === "Terminé", err = (m.state||"").includes("erreur");
     const c = ok ? "var(--ok)" : err ? "var(--danger)" : "var(--muted)";
     const b = ok ? "var(--okSoft)" : err ? "var(--dangerSoft)" : "#F2F2F2";
-    h += '<div class="res" style="border-left-color:'+c+';background:'+b+'"><div class="t">'+esc(m.result || m.state)+'</div><div class="s">'+esc(m.finishLine || ((m.kind||"Programme")+' '+(ok?'terminé':'arrêté')+' le '+m.finished.replace(' ',' à ')))+'</div></div>';
+    // Autonomie en orange (« 5h00 C5 »), même style que le logiciel (26/11/2026)
+    const rt = esc(m.result || m.state).replace(/^Autonomie (\S+(?: C5)?)/, 'Autonomie <span style="color:var(--amp)">$1</span>');
+    h += '<div class="res" style="border-left-color:'+c+';background:'+b+'"><div class="t">'+rt+'</div><div class="s">'+esc(m.finishLine || ((m.kind||"Programme")+' '+(ok?'terminé':'arrêté')+' le '+m.finished.replace(' ',' à ')))+'</div></div>';
   }
   if (m.v != null) {
     h += '<div class="band"><div><div class="l">Tension</div><div class="v" style="color:var(--volt)">'+num(m.v,1)+'<small>V</small></div><div class="c">'+(active?'consigne '+num(m.setV,1):'&nbsp;')+'</div></div>';
