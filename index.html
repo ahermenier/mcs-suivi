@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126084854">
+<meta name="mcs-build" content="20261126085940">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126084854') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126085940') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -79,7 +79,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background
 .step .box span{display:block;overflow:hidden;text-overflow:ellipsis}
 .step .box .sh{display:flex;align-items:center;gap:3px;font:600 13.5px var(--sans);color:var(--ink);margin-bottom:1px}
 .step .box .arr{flex:none}
-.step .box b{font-weight:600}
+.step .box b{font-weight:600}.step .box .real{color:#7A6050;font-size:.92em}
 .step.next .box{color:#9A9A9A}.step.next .box .sh{color:#9A9A9A}
 .step .bar{height:3px;border-radius:2px;background:#E3E6EA;margin:3px 4px 2px;overflow:hidden}
 .step .bar i{display:block;height:100%;background:var(--ok)}
@@ -426,8 +426,10 @@ function card(m, stale){
       const fr = s.state === "done" ? 1 : s.state === "now" ? (s.frac||0) : 0;
       // Toujours 3 lignes (n°, type, durée) : toutes les cases ont la même hauteur et les barres sont alignées
       const raw = String(s.text || "").replace(/^terminée$/, "terminée");
+      // Décharge C10 (choix C, 26/11) : « 5h00 C5 · −620 Ah · réel 10h00 C10 » → C5 en gras, durée réelle en petit
+      const real = / · réel /.test(raw);
       const t = raw.startsWith("prévue ") ? ["prévue", raw.slice(7)] : raw.includes(" / ") ? [raw.split(" / ")[0], "/ " + raw.split(" / ")[1]] : raw.includes(" · ") ? raw.split(" · ") : /^\S+ C\d+$/.test(raw) ? raw.split(" ") : [raw];
-      return '<div class="step'+(later?' next':'')+'"><div class="box" style="background:'+bgc+'"><span class="sh"><b>'+s.no+'</b>'+arrow(s.dis)+'</span><span>'+esc(t[0])+'</span><span>'+esc(t[1]||'\u00a0')+'</span>'+(t.length > 2 ? '<span>'+esc(t.slice(2).join(' · '))+'</span>' : '')+'</div><div class="bar"><i style="width:'+Math.round(fr*100)+'%"></i></div></div>';
+      return '<div class="step'+(later?' next':'')+'"><div class="box" style="background:'+bgc+'"><span class="sh"><b>'+s.no+'</b>'+arrow(s.dis)+'</span>'+(real ? '<span><b>'+esc(t[0])+'</b></span>' : '<span>'+esc(t[0])+'</span>')+'<span>'+esc(t[1]||'\u00a0')+'</span>'+(t.length > 2 ? '<span'+(real ? ' class="real"' : '')+'>'+esc(t.slice(2).join(' · '))+'</span>' : '')+'</div><div class="bar"><i style="width:'+Math.round(fr*100)+'%"></i></div></div>';
     }).join("") + '</div>';
   }
   if (m.start) {
