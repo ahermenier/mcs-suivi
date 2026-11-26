@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126204045">
+<meta name="mcs-build" content="20261126204415">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126204045') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126204415') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -182,6 +182,13 @@ input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 .rload{text-align:center;color:var(--muted);margin-top:30vh;font-size:15px}
 .ritem{cursor:pointer}.rsim{font:500 10px var(--sans);color:#8A8A8A;letter-spacing:.04em;margin-left:4px}
 #rapMsg{font-size:13px;color:var(--muted);margin:6px 0 0;min-height:0}
+#rapView,#rapView .rlist{overflow-x:hidden;touch-action:pan-y}
+.blab{overflow:hidden}.bars{margin-top:30px !important}
+.bars .th{z-index:2}.bars .th i{background:#fff;padding:0 3px}
+/* Suivi de l'envoi par mail : bandeau en haut de l'écran Rapports, visible quel que soit le défilement */
+#rapToast{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 74px);z-index:16;max-width:616px;margin:0 auto;background:#1F2A37;color:#fff;
+  font:500 14px var(--sans);padding:10px 12px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+#rapToast.ok{background:var(--ok)}#rapToast.bad{background:var(--danger)}
 #pdfView{position:fixed;inset:0;background:#E9ECF0;z-index:25;display:flex;flex-direction:column}
 #pdfView .ptop{display:flex;align-items:flex-end;gap:8px;background:#fff;border-bottom:1px solid var(--rule);padding:calc(env(safe-area-inset-top) + 28px) 12px 8px}
 #pdfView .ptop .back{border:0;background:none;color:var(--blue);font:600 16px var(--sans);padding:0;height:28px}
@@ -224,6 +231,7 @@ input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 
 <div id="curBar" class="hidden"></div>
 <div id="rapView" class="hidden"></div>
+<div id="rapToast" class="hidden"></div>
 <div id="pdfView" class="hidden"><div class="ptop"><button class="back" id="pdfBack">‹ Retour</button><b id="pdfTitle"></b><button class="share" id="pdfShare">Partager</button></div><div id="pdfPages"></div></div>
 <div id="modal" class="modal hidden">
   <div class="sheet">
@@ -907,7 +915,7 @@ let rapWatchT = null;
 function rapWatch(){ if (rapWatchT || rapLoading) return; rapWatchT = setTimeout(async () => { rapWatchT = null; if (!document.hidden) { await rapLoad(); scheduleRender(); } }, rapIdx ? 10000 : 300); }
 function rapOpenFiche(id){ rapParc = id; rapScreen = "batt"; $("rapView").classList.remove("hidden"); rapDraw(); }
 function rapOpen(){ rapScreen = "list"; $("rapView").classList.remove("hidden"); rapDraw(); rapLoad(); }
-function rapClose(){ $("rapView").classList.add("hidden"); }
+function rapClose(){ $("rapView").classList.add("hidden"); $("rapToast").classList.add("hidden"); rapNote.last = null; }
 const pcClass = r => r.pc == null ? "mu" : r.pc >= 80 ? "ok" : "wn";
 const chev = '<svg class="chev" width="8" height="14" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>';
 function rapRowRight(r){
@@ -962,7 +970,7 @@ function rapBatt(){
     + '<div class="bhead"><b>'+esc([one.ma, one.pa].filter(Boolean).join(" ") || one.f)+'</b><span>'+esc([one.bt, pas.length + ' passage' + (pas.length > 1 ? 's' : '')].filter(Boolean).join(" · "))+'</span></div>';
   if (withPc.length) {
     h += '<div class="bars"><div class="th" style="bottom:80%"><i>seuil 80 %</i></div>'+withPc.map(r => '<div class="b'+(r === last ? ' cur' : '')+'" style="height:'+Math.max(2, Math.min(100, r.pc))+'%"><span>'+r.pc+' %</span></div>').join("")+'</div>'
-      + '<div class="blab">'+withPc.map(r => '<span>'+dd(r.d)+'/'+new Date(r.d || 0).getFullYear()+'</span>').join("")+'</div>';
+      + '<div class="blab">'+withPc.map(r => '<span>'+dd(r.d)+(withPc.length <= 3 ? '/'+new Date(r.d || 0).getFullYear() : withPc.length <= 4 ? '/'+String(new Date(r.d || 0).getFullYear()).slice(2) : '')+'</span>').join("")+'</div>';
     if (prev) { const dlt = last.pc - prev.pc;
       h += '<div class="rnote" style="margin:0 0 6px;font-weight:600;color:var(--'+(last.pc >= 80 ? 'muted' : 'warn')+')">'+(dlt === 0 ? 'Stable' : (dlt > 0 ? '+' : '−') + Math.abs(dlt) + ' point' + (Math.abs(dlt) > 1 ? 's' : ''))+' depuis le passage du '+dd(prev.d)+(last.pc < 80 ? ' · sous le seuil de réforme' : '')+'</div>'; }
   }
@@ -990,7 +998,15 @@ function rapDraw(){
     if (hadFocus) { si.focus(); try { si.setSelectionRange(sel, sel); } catch(e){} }
   }
 }
-function rapNote(t){ const n = $("rapMsg"); if (n) n.textContent = t; }
+let rapToastT = null;
+function rapNote(t){
+  const n = $("rapMsg"); if (n) n.textContent = "";
+  const el = $("rapToast"); if (!t || $("rapView").classList.contains("hidden")) { el.classList.add("hidden"); return; }
+  if (t === rapNote.last) return; rapNote.last = t;
+  el.textContent = t; el.className = /envoyé à/i.test(t) ? "ok" : /^⚠/.test(t) ? "bad" : "";
+  clearTimeout(rapToastT);
+  if (/envoyé à|^⚠/i.test(t)) rapToastT = setTimeout(() => el.classList.add("hidden"), 7000);
+}
 // Envoi par mail d'un rapport archivé : mêmes destinataires que sur le PC, c'est le PC qui envoie (il doit être joignable)
 function rapMail(id){
   const r = (rapIdx || []).find(x => x.id === id); if (!r) return;
