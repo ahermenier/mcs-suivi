@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126204702">
+<meta name="mcs-build" content="20261126205329">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126204702') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126205329') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -866,6 +866,7 @@ async function waitMail(key, at, n){
 $("mGo").addEventListener("click", async () => {
   const { key, act } = modalCtx; $("modal").classList.add("hidden");
   if (act === "mail") { sendMail(key, modalCtx.file); return; }
+  if (act === "share") { doShare(); return; }
   const at = pcNow(key);
   pending[key] = "Ordre envoyé, en attente de MCS Studio (jusqu'à 20 s)…"; render();
   try {
@@ -1012,7 +1013,7 @@ function rapNote(t){
 function rapMail(id){
   const r = (rapIdx || []).find(x => x.id === id); if (!r) return;
   const key = Object.keys(machines).find(k => machines[k] && machines[k].report && machines[k].report.recips && machines[k].report.recips.length && !!machines[k].sim === r.sim);
-  if (!key || isStale(machines[key])) { rapNote("⚠ L'envoi par mail passe par le PC de l'atelier : il n'est pas joignable pour l'instant."); return; }
+  if (!key || isStale(machines[key])) { rapShare(r); return; }   // PC injoignable : envoi depuis le téléphone (26/11/2026)
   const base = machines[key].report, env = String(r.env || "").split(/\r?\n/).filter(Boolean).map(l => l.split("|"));
   const recips = base.recips.map(x => { const hit = env.filter(e => (e[1] || "").trim().toLowerCase() === String(x.mail).trim().toLowerCase()).pop();
     let last = null; if (hit) { const t = new Date(hit[0].replace(" ", "T")); if (!isNaN(t)) last = (w => w.charAt(0).toUpperCase() + w.slice(1))(t.toLocaleDateString("fr-FR", { weekday: "short" })) + " " + String(t.getDate()).padStart(2, "0") + "/" + String(t.getMonth() + 1).padStart(2, "0") + " " + String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0"); }
@@ -1022,6 +1023,38 @@ function rapMail(id){
   askMail({ id: [r.ma, r.pa].filter(Boolean).join(" "), ot: r.ot, finished: null, report: { file: r.f, ok: base.ok, recips } });
   const d = new Date(r.d || 0); $("mText").textContent += (r.d ? " · cycle du " + String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear() : "");
 }
+// Envoi depuis le téléphone quand le PC n'est pas joignable : le PDF archivé est joint, le mail part de ce téléphone
+let shareFile = null, shareText = "";
+async function rapShare(r){
+  modalCtx = { key: null, act: "share", fromRap: true };
+  shareFile = null;
+  const who = [r.ma, r.pa].filter(Boolean).join(" ");
+  const subj = ["Rapport Régénération", r.ma, r.pa, r.ot ? "OT N°" + r.ot : null].filter(Boolean).join(" ");
+  shareText = "Bonjour,\n\nVeuillez trouver ci-joint le rapport de régénération de la batterie.\n\n\nCordialement.";
+  $("mTitle").textContent = "Envoyer depuis le téléphone";
+  $("mText").textContent = "Le PC de l'atelier n'est pas joignable. Le rapport " + (who ? who + " " : "") + "partira de la messagerie de ce téléphone : choisissez Mail, puis le destinataire.";
+  $("mList").classList.add("hidden");
+  $("mGo").textContent = "Préparation du PDF…"; $("mGo").className = "go neutral"; $("mGo").disabled = true;
+  $("modal").classList.remove("hidden");
+  try {
+    // PDF préparé avant l'appui (l'iPhone n'ouvre le partage que juste après un appui)
+    const b64 = r.pdf ? await dbGet((r.sim ? "simReportFiles/" : "reportFiles/") + r.id + "/pdf") : null;
+    if (!b64) throw new Error("rapport PDF absent");
+    const bin = atob(b64), bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    shareFile = new File([bytes], r.f.replace(/\.csv$/i, ".pdf"), { type: "application/pdf" });
+    shareFile._subject = subj;
+    if (modalCtx && modalCtx.act === "share") { $("mGo").textContent = "Envoyer"; $("mGo").disabled = false; }
+  } catch(e){ if (modalCtx && modalCtx.act === "share") { $("mGo").textContent = "Indisponible"; $("mText").textContent = "⚠ " + friendly(e.message); } }
+}
+async function doShare(){
+  if (!shareFile) return;
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [shareFile] })) { await navigator.share({ files: [shareFile], title: shareFile._subject, text: shareText }); rapNote("Rapport prêt dans la messagerie du téléphone."); return; }
+  } catch(e){ if (e.name === "AbortError") return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(shareFile); a.download = shareFile.name; a.click();
+  rapNote("⚠ Partage indisponible sur ce téléphone : le PDF a été téléchargé.");
+}
+
 // Lecteur PDF dans l'appli (pdf.js) : le vrai rapport, page par page, net au zoom ; « Partager » pour l'enregistrer ou l'envoyer
 let pdfLib = null, pdfBlob = null, pdfName = "";
 function loadPdfLib(){
