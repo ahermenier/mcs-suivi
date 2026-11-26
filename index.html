@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126200326">
+<meta name="mcs-build" content="20261126204045">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126200326') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126204045') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -898,7 +898,8 @@ async function rapLoad(){
     list.sort((a, b) => (b.d || 0) - (a.d || 0));
     rapIdx = list;
   } catch(e){ rapIdx = rapIdx || []; $("rapMsg") && ($("rapMsg").textContent = "⚠ " + friendly(e.message)); }
-  rapLoading = false; rapDraw();
+  rapLoading = false;
+  if (rapScreen === "list" && $("rapBody") && document.activeElement && document.activeElement.id === "rapSearch") rapRefreshList(); else rapDraw();
 }
 // Rapport du cycle qui vient de finir : cherché dans l'index (relu toutes les 10 s tant qu'il n'y est pas)
 function rapFind(file, sim){ return (rapIdx || []).find(r => r.f === file && !!r.sim === !!sim); }
@@ -914,16 +915,23 @@ function rapRowRight(r){
   if (r.pc != null) return '<div class="r"><b class="'+pcClass(r)+'">'+r.pc+' %</b><span>'+esc((r.au || "") + (r.c5 ? " C5" : ""))+'</span></div>';
   return '<div class="r"><b class="mu">'+esc(r.mo || "—")+'</b></div>';
 }
+const rapMachines = () => ["Tous", ...[...new Set((rapIdx || []).map(r => r.mc).filter(Boolean))].sort()];
 function rapList(){
-  const machinesTxt = ["Tous", ...[...new Set((rapIdx || []).map(r => r.mc).filter(Boolean))].sort()];
+  const machinesTxt = rapMachines();
+  // Le champ de recherche n'est construit qu'une fois : la frappe ne met à jour que la liste (26/11/2026 : sinon le clavier
+  // de l'iPhone repassait en lettres après chaque chiffre, l'effacement continu ne marchait pas et la saisie ramait)
+  return '<div class="rtop"><button class="back" data-r="close">‹ Retour</button><h2>Rapports</h2></div>'
+    + '<div class="rsearch"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>'
+    + '<input id="rapSearch" type="search" placeholder="N° parc, OT ou marque" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" value="'+esc(rapQ)+'"></div>'
+    + '<div class="rfil">'+machinesTxt.map((f, i) => '<button data-f="'+i+'" class="'+(i === rapF ? 'on' : '')+'">'+esc(f)+'</button>').join("")+'</div>'
+    + '<div id="rapBody">' + rapListBody() + '</div>';
+}
+function rapListBody(){
+  const machinesTxt = rapMachines();
   const q = normP(rapQ), qt = rapQ.trim().toUpperCase();
   const rows = (rapIdx || []).filter(r => (rapF === 0 || r.mc === machinesTxt[rapF])
     && (!q || normP(r.pa).includes(q) || normP(r.ot).includes(q) || (qt && String(r.ma || "").toUpperCase().includes(qt))));
-  let h = '<div class="rtop"><button class="back" data-r="close">‹ Retour</button><h2>Rapports</h2></div>'
-    + '<div class="rsearch"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>'
-    + '<input id="rapSearch" type="search" placeholder="N° parc, OT ou marque" autocomplete="off" autocorrect="off" autocapitalize="characters" value="'+esc(rapQ)+'"></div>'
-    + '<div class="rfil">'+machinesTxt.map((f, i) => '<button data-f="'+i+'" class="'+(i === rapF ? 'on' : '')+'">'+esc(f)+'</button>').join("")+'</div>'
-    + '<div class="rcount">'+(rapLoading && !rapIdx ? "Chargement…" : (rapQ ? rows.length + ' rapport'+(rows.length > 1 ? 's' : '')+' pour « '+esc(rapQ)+' »' : (rapIdx || []).length.toLocaleString("fr-FR") + ' rapports') + ' · disponibles même PC éteint')+'</div>'
+  let h = '<div class="rcount">'+(rapLoading && !rapIdx ? "Chargement…" : (rapQ ? rows.length + ' rapport'+(rows.length > 1 ? 's' : '')+' pour « '+esc(rapQ)+' »' : (rapIdx || []).length.toLocaleString("fr-FR") + ' rapports') + ' · disponibles même PC éteint')+'</div>'
     + '<div id="rapMsg"></div><div class="rlist">';
   if (!rapIdx && rapLoading) h += '<div class="rload">Chargement des rapports…</div>';
   else if (!rows.length) h += '<div class="rload">'+(rapQ ? 'Aucun rapport pour « '+esc(rapQ)+' »' : 'Aucun rapport archivé pour l\'instant.<br>Le PC les copie au fil de l\'eau (Paramètres › Rapports sur le téléphone).')+'</div>';
@@ -938,6 +946,11 @@ function rapList(){
   if (rows.length > 400) h += '<div class="rnote">… '+(rows.length - 400)+' de plus : précisez la recherche.</div>';
   return h + '</div>';
 }
+function rapBindItems(v){
+  v.querySelectorAll(".ritem[data-id]").forEach(b => b.addEventListener("click", () => { rapParc = b.dataset.id; rapScreen = "batt"; rapDraw(); v.querySelector(".rlist") && (v.querySelector(".rlist").scrollTop = 0); }));
+}
+let rapQT = null;
+function rapRefreshList(){ const b = $("rapBody"); if (!b) return rapDraw(); b.innerHTML = rapListBody(); rapBindItems($("rapView")); }
 function rapBatt(){
   const one = (rapIdx || []).find(r => r.id === rapParc) || {};
   const pas = one.pa ? (rapIdx || []).filter(r => sameParc(r.pa, one.pa) && r.sim === one.sim) : [one];
@@ -968,11 +981,14 @@ function rapDraw(){
   v.innerHTML = rapScreen === "batt" ? rapBatt() : rapList();
   v.querySelectorAll("[data-r]").forEach(b => b.addEventListener("click", () => { if (b.dataset.r === "close") rapClose(); else { rapScreen = "list"; rapDraw(); } }));
   v.querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => { rapF = +b.dataset.f; rapDraw(); }));
-  v.querySelectorAll(".ritem[data-id]").forEach(b => b.addEventListener("click", () => { rapParc = b.dataset.id; rapScreen = "batt"; rapDraw(); v.querySelector(".rlist") && (v.querySelector(".rlist").scrollTop = 0); }));
+  rapBindItems(v);
   v.querySelectorAll("[data-pdf]").forEach(b => b.addEventListener("click", () => openPdf(b.dataset.pdf)));
   v.querySelectorAll("[data-mail]").forEach(b => b.addEventListener("click", () => rapMail(b.dataset.mail)));
   const si = $("rapSearch");
-  if (si) { si.addEventListener("input", () => { rapQ = si.value; rapDraw(); }); if (hadFocus) { si.focus(); try { si.setSelectionRange(sel, sel); } catch(e){} } }
+  if (si) {
+    si.addEventListener("input", () => { rapQ = si.value; clearTimeout(rapQT); rapQT = setTimeout(rapRefreshList, 120); });
+    if (hadFocus) { si.focus(); try { si.setSelectionRange(sel, sel); } catch(e){} }
+  }
 }
 function rapNote(t){ const n = $("rapMsg"); if (n) n.textContent = t; }
 // Envoi par mail d'un rapport archivé : mêmes destinataires que sur le PC, c'est le PC qui envoie (il doit être joignable)
