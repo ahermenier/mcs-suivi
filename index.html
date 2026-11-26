@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126140306">
+<meta name="mcs-build" content="20261126155842">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126140306') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126155842') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -529,8 +529,15 @@ function drawChart(key, pts){
     if (lv) pills.push(() => {
       const lab = (unit === "°C" ? Math.round(lv[idx]) : num(lv[idx], unit === "V" ? 1 : 0)) + " " + unit;
       g.font = "600 11px " + MONO; const tw = g.measureText(lab).width;
-      const vy = Math.max(top, Math.min(bot, Y(lv[idx]))), ly = Math.min(Math.max(vy - 11, top + 7), bot - 7);
+      const vy = Math.max(top, Math.min(bot, Y(lv[idx])));
       const px = X(lastX); let lx = px - 4 - tw; if (lx < padL + 2) lx = px + 6;
+      // Valeur au-dessus OU au-dessous de la courbe sur toute sa largeur, jamais traversée par elle (26/11/2026)
+      let yMin = vy, yMax = vy;
+      pts.forEach(p => { const v = p[idx]; if (v == null || isNaN(v)) return; const x = X(p[0]); if (x < lx - 3 || x > lx + tw + 3) return;
+        const y = Math.max(top, Math.min(bot, Y(v))); yMin = Math.min(yMin, y); yMax = Math.max(yMax, y); });
+      const up = yMin - 10, dn = yMax + 10;
+      let ly = up - 6 >= top ? up : dn + 6 <= bot ? dn : (yMin - top > bot - yMax ? up : dn);
+      ly = Math.min(Math.max(ly, top + 7), bot - 7);
       g.fillStyle = col; g.fillRect(px - 2.5, vy - 2.5, 5, 5);
       g.textAlign = "left"; g.textBaseline = "middle"; g.lineJoin = "round"; g.lineWidth = 4; g.strokeStyle = "#fff"; g.strokeText(lab, lx, ly);
       g.fillStyle = col; g.fillText(lab, lx, ly);
