@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png?v=2">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126075511">
+<meta name="mcs-build" content="20261126081130">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,19 +22,19 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126075511') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126081130') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* Style « instrument » : filets fins, chiffres d'afficheur (IBM Plex Mono), texte en IBM Plex Sans Condensed.
+/* Style « instrument » : filets fins, texte et chiffres en IBM Plex Sans Condensed (chiffres de largeur égale, zéro sans point : demande atelier 26/11).
    La couleur ne sert qu'à dire quelque chose : tension / courant / température, décharge / restauration, état. */
-:root{--bg:#fff;--card:#fff;--ink:#1F2A37;--rule:#C9CED6;--line:#DDE1E6;--text:#1F2A37;--muted:#5E6875;--volt:#2F64A8;--amp:#B86A28;--temp:#7556A8;--ok:#178A4C;--okSoft:#EAF5EE;--warn:#8A5A00;--warnSoft:#FBF1DE;--danger:#C42F24;--dangerSoft:#FBEAE8;--blue:#1F5FA8;--ampCell:#F7E6D8;--voltCell:#E3EBF6;--sans:'IBM Plex Sans Condensed',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace}
+:root{--bg:#fff;--card:#fff;--ink:#1F2A37;--rule:#C9CED6;--line:#DDE1E6;--text:#1F2A37;--muted:#5E6875;--volt:#2F64A8;--amp:#B86A28;--temp:#7556A8;--ok:#178A4C;--okSoft:#EAF5EE;--warn:#8A5A00;--warnSoft:#FBF1DE;--danger:#C42F24;--dangerSoft:#FBEAE8;--blue:#1F5FA8;--ampCell:#F7E6D8;--voltCell:#E3EBF6;--sans:'IBM Plex Sans Condensed',system-ui,sans-serif;--mono:'IBM Plex Sans Condensed',system-ui,sans-serif}
 *{box-sizing:border-box}
-html,body{margin:0;background:#fff;color:var(--text);font-family:var(--sans);-webkit-text-size-adjust:100%}
+html,body{margin:0;background:#fff;color:var(--text);font-family:var(--sans);font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%}
 /* iPhone (iOS 26) : le système floute une bande sous l'heure et la batterie, même hors de la barre d'état.
    Rien d'écrit dans cette bande : la page commence par les onglets, un peu plus bas ; « Mis à jour » passe en bas. */
 #appView{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 12px calc(4px + env(safe-area-inset-bottom))}
@@ -68,7 +68,7 @@ main{flex:1;min-height:0;display:flex;flex-direction:column}
 .band>div{padding:5px 8px 6px;border-left:1px solid var(--line);min-width:0}
 .band>div:first-child{border-left:0;padding-left:0}
 .band .l{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.band .v{font:500 26px var(--mono);letter-spacing:-.03em;line-height:1.15;white-space:nowrap}
+.band .v{font:600 28px var(--mono);letter-spacing:0;line-height:1.15;white-space:nowrap}
 .band .v small{font:600 15px var(--sans);letter-spacing:0;margin-left:2px}
 .band .c{font:400 11.5px var(--mono);color:#777}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#fff}
@@ -81,8 +81,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background
 .step .box .arr{flex:none}
 .step .box b{font-weight:600}
 .step.next .box{color:#9A9A9A}.step.next .box .sh{color:#9A9A9A}
-.step .bar{position:absolute;left:0;right:0;top:-1px;height:3px;background:transparent;overflow:hidden}
-.step .bar i{display:block;height:100%}
+.step .bar{height:3px;border-radius:2px;background:#E3E6EA;margin:3px 4px 2px;overflow:hidden}
+.step .bar i{display:block;height:100%;background:var(--ok)}
 .times{display:flex;justify-content:space-between;font:400 13px var(--sans);color:#666;margin-top:0;padding-top:6px;border-top:1px solid var(--line);gap:8px;flex-wrap:wrap}
 .times b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
 .acts{display:flex;justify-content:center;margin-top:10px}
@@ -427,7 +427,7 @@ function card(m, stale){
       // Toujours 3 lignes (n°, type, durée) : toutes les cases ont la même hauteur et les barres sont alignées
       const raw = String(s.text || "").replace(/^terminée$/, "terminée");
       const t = raw.startsWith("prévue ") ? ["prévue", raw.slice(7)] : raw.includes(" / ") ? [raw.split(" / ")[0], "/ " + raw.split(" / ")[1]] : raw.includes(" · ") ? raw.split(" · ") : /^\S+ C\d+$/.test(raw) ? raw.split(" ") : [raw];
-      return '<div class="step'+(later?' next':'')+'"><div class="box" style="background:'+bgc+'"><span class="sh"><b>'+s.no+'</b>'+arrow(s.dis)+'</span><span>'+esc(t[0])+'</span><span>'+esc(t[1]||'\u00a0')+'</span>'+(t.length > 2 ? '<span>'+esc(t.slice(2).join(' · '))+'</span>' : '')+'</div><div class="bar"><i style="width:'+Math.round(fr*100)+'%;background:'+col+'"></i></div></div>';
+      return '<div class="step'+(later?' next':'')+'"><div class="box" style="background:'+bgc+'"><span class="sh"><b>'+s.no+'</b>'+arrow(s.dis)+'</span><span>'+esc(t[0])+'</span><span>'+esc(t[1]||'\u00a0')+'</span>'+(t.length > 2 ? '<span>'+esc(t.slice(2).join(' · '))+'</span>' : '')+'</div><div class="bar"><i style="width:'+Math.round(fr*100)+'%"></i></div></div>';
     }).join("") + '</div>';
   }
   if (m.start) {
@@ -475,7 +475,7 @@ function drawChart(key, pts){
   const lastX = pts[pts.length-1][0];
   const xmax = Math.max(sc ? sc[6] : lastX, lastX, 1/60);
   const X = t => padL + Math.min(t, xmax) / xmax * pw;
-  const grid = "#ECECEC", MONO = "IBM Plex Mono, ui-monospace, monospace";
+  const grid = "#ECECEC", MONO = "IBM Plex Sans Condensed, system-ui, sans-serif";
   // repères de temps (tracés avant les courbes pour ne pas les hachurer)
   const step = niceStep(xmax); g.font = "400 10.5px " + MONO; g.fillStyle = "#666"; g.textBaseline = "alphabetic";
   const every = Math.max(1, Math.ceil((xmax / step + 1) / 6));   // au plus 6 libellés sur un téléphone
