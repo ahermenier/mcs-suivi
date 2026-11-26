@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126185251">
+<meta name="mcs-build" content="20261126185750">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126185251') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126185750') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -122,6 +122,14 @@ input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 .sheet .row2 .go{background:var(--danger);border-color:var(--danger);color:#fff}
 .sheet .row2 .go.neutral{background:var(--blue);border-color:var(--blue)}
 .hidden{display:none!important}
+/* Bandeau du curseur quand on zoome (26/11/2026) : collé en haut de l'ÉCRAN, sous la zone floutée de l'iPhone, taille normale */
+:root{--sat:env(safe-area-inset-top,0px)}
+#curBar{position:absolute;left:0;top:0;z-index:30;transform-origin:0 0;background:#fff;border-bottom:1px solid var(--rule);
+  padding:calc(var(--sat) + 30px) 14px 8px;box-shadow:0 2px 6px rgba(17,17,17,.08);pointer-events:none}
+#curBar .t{font:600 15px var(--sans);color:var(--ink)}
+#curBar .t span{color:var(--muted);font-weight:500}
+#curBar .vals{display:flex;gap:18px;margin-top:3px;font:700 22px var(--sans);font-variant-numeric:tabular-nums}
+#curBar .vals small{font-size:14px;margin-left:2px}
 @media (max-height:720px){
   .res{padding:5px 8px;margin-top:7px}.res .t{font-size:16px}.res .s{font-size:12px}
   .band .v{font-size:21px}.band .v small{font-size:13px}.band .l,.band .c{font-size:10.5px}
@@ -160,6 +168,7 @@ input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   </main>
 </div>
 
+<div id="curBar" class="hidden"></div>
 <div id="modal" class="modal hidden">
   <div class="sheet">
     <h2 id="mTitle">Arrêter</h2>
@@ -665,6 +674,8 @@ function drawChart(key, pts){
       g.textAlign = "left"; g.textBaseline = "middle"; g.lineJoin = "round"; g.lineWidth = 4 * k; g.strokeStyle = "#fff"; g.strokeText(lab, lx, ly);
       g.fillStyle = l.col; g.fillText(lab, lx, ly);
     });
+    curBarShow(zs > 1.05, best, m, laneInfo);
+    if (zs > 1.05) return;   // zoomé : l'heure et les valeurs sont dans le bandeau du haut de l'écran
     // heure : depuis le départ, et heure du jour (calculée sur l'heure du PC)
     let tl = "+" + fmtH(best[0]);
     if (m.updated && m.h != null) { const d = new Date(m.updated - (m.h - best[0]) * 3600e3); tl = (d.toDateString() === new Date().toDateString() ? "Auj." : (w => w.charAt(0).toUpperCase() + w.slice(1))(d.toLocaleDateString("fr-FR", { weekday: "short" }))) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + "  ·  " + tl; }
@@ -683,6 +694,22 @@ function drawChart(key, pts){
     g.fillStyle = "#fff"; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(tl, bx + 6 * k, by + bh / 2 + 0.5 * k);
   }
 }
+function curTimeText(m, h){
+  let tl = "+" + fmtH(h);
+  if (m.updated && m.h != null) { const d = new Date(m.updated - (m.h - h) * 3600e3);
+    tl = (d.toDateString() === new Date().toDateString() ? "Auj." : (w => w.charAt(0).toUpperCase() + w.slice(1))(d.toLocaleDateString("fr-FR", { weekday: "short" }))) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + '<span>  ·  ' + tl + '</span>'; }
+  return tl;
+}
+// Bandeau collé à l'écran zoomé : position et échelle suivent le zoom (visualViewport), jamais dans la zone floutée
+function curBarShow(on, best, m, lanes){
+  const bar = $("curBar"), vv = window.visualViewport;
+  if (!on || !best || !vv) { bar.classList.add("hidden"); return; }
+  bar.innerHTML = '<div class="t">' + curTimeText(m, best[0]) + '</div><div class="vals">' + lanes.map(l => { const v = best[l.idx]; if (v == null || isNaN(v)) return "";
+    return '<span style="color:' + l.col + '">' + (l.unit === "°C" ? Math.round(v) : num(v, l.unit === "V" ? 1 : 0)) + '<small>' + l.unit + '</small></span>'; }).join("") + '</div>';
+  bar.style.width = (vv.width * vv.scale) + "px";
+  bar.style.transform = "translate(" + vv.pageLeft + "px," + vv.pageTop + "px) scale(" + (1 / vv.scale) + ")";
+  bar.classList.remove("hidden");
+}
 // Curseur : suit le doigt sur le graphique, s'efface 4 s après qu'on le lâche (ou d'un appui ailleurs)
 let cursor = null, cursorTimer = null;
 function cursorAt(e, cv){
@@ -692,7 +719,7 @@ function cursorAt(e, cv){
 }
 function cursorOff(delay){
   clearTimeout(cursorTimer);
-  cursorTimer = setTimeout(() => { const k = cursor && cursor.key; cursor = null; if (k && machines[k]) drawChart(k, chartPts(machines[k])); }, delay);
+  cursorTimer = setTimeout(() => { const k = cursor && cursor.key; cursor = null; $("curBar").classList.add("hidden"); if (k && machines[k]) drawChart(k, chartPts(machines[k])); }, delay);
 }
 // un doigt = curseur ; deux doigts = zoom normal (le curseur s'efface)
 document.addEventListener("touchstart", e => { const cv = e.target.closest && e.target.closest("canvas[id^='c_']"); if (cv && e.touches.length === 1) { touching = true; cursorAt(e, cv); } else { touching = false; if (cursor) cursorOff(0); } }, { passive: true });
