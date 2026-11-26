@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126180938">
+<meta name="mcs-build" content="20261126181700">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126180938') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126181700') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -239,13 +239,14 @@ function showApp(){
   $("loginView").classList.add("hidden"); $("appView").classList.remove("hidden");
   refresh(); loadHist(); openStream();
   // Filet de sécurité : relecture complète toutes les 30 s, graphes toutes les 60 s ; l'affichage vit surtout du flux en direct
-  if (!timer) { timer = setInterval(() => { refresh(); if (++tick % 2 === 0) loadHist(); }, 30000); }
+  if (!timer) { timer = setInterval(() => { if (document.hidden) return; refresh(); if (++tick % 2 === 0) loadHist(); }, 30000); }
 }
 setInterval(() => { if (timer) scheduleRender(); }, 5000);
 let tick = 0, es = null, esTimer = null, hists = {}, renderPending = false;
 // Flux en direct Firebase (Server-Sent Events) : chaque envoi du PC (toutes les 5 s) arrive aussitôt
 async function openStream(){
   closeStream();
+  if (document.hidden) return;   // jamais de flux en arrière-plan
   try { await ensureToken(); } catch(e){ if (e.message === "NOLOGIN") showLogin(); return; }
   es = new EventSource(CFG.db + "/state.json?auth=" + encodeURIComponent(idToken));
   const onData = (e, merge) => {
@@ -292,7 +293,13 @@ $("loginForm").addEventListener("submit", async e => {
   finally { btn.disabled = false; btn.textContent = "Se connecter"; }
 });
 $("logoutBtn").addEventListener("click", () => { if (confirm("Se déconnecter de ce téléphone ?")) { store.set("mcs_refresh", null); idToken = null; showLogin(); } });
-document.addEventListener("visibilitychange", () => { if (!document.hidden && timer) { refresh(); loadHist(); if (!es) openStream(); } });
+// Appli réduite : flux en direct coupé tout de suite (aucune consommation Firebase en arrière-plan), rouvert au retour
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { closeStream(); clearTimeout(esTimer); return; }
+  // Retour au premier plan : fraîcheur remise à « connexion… » le temps du premier envoi (pas de faux « reçu il y a 10 min »)
+  pageStart = Date.now(); rxAt = {}; rxUpd = {}; lastRxAny = 0;
+  if (timer) { refresh(); loadHist(); if (!es) openStream(); }
+});
 
 // ---------- affichage ----------
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -413,7 +420,7 @@ function needHist(){ if (!needTimer) needTimer = setTimeout(() => { needTimer = 
 // Fraîcheur (26/11/2026) : jugée à l'heure de RÉCEPTION sur le téléphone, jamais à l'horloge du PC (elle peut avancer de
 // plusieurs minutes et laissait « en direct » affiché après une coupure). Le PC envoie toutes les 5 s : plus rien depuis
 // 12 s = plus en direct. Coupure Internet du téléphone détectée à part (hors ligne).
-const LIVE_MS = 12000, STALE_MS = 30000, pageStart = Date.now();
+const LIVE_MS = 12000, STALE_MS = 30000; let pageStart = Date.now();
 let rxAt = {}, rxUpd = {}, lastRxAny = 0, netDown = !navigator.onLine;
 function noteRx(){
   const now = Date.now();
@@ -447,7 +454,7 @@ function freshTxt(m){
 // Toutes les secondes : texte de fraîcheur à jour ; carte redessinée quand l'état bascule (boutons, bandeau)
 let lastLiveSig = "";
 setInterval(() => {
-  if (!timer) return;
+  if (!timer || document.hidden) return;
   const m = machines[selected]; if (!m) return;
   const el = document.querySelector(".card .fresh, .fresh"); if (el) el.outerHTML = freshTxt(m);
   const sig = netDown + "|" + isStale(m) + "|" + notLive(m);
