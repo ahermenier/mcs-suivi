@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126220029">
+<meta name="mcs-build" content="20261126220847">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126220029') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126220847') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -167,7 +167,7 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
 .ritem .r{text-align:right;flex:none}
 .ritem .r b{display:block;font-size:16.5px;font-weight:600}
 .ritem .r span{font-size:12.5px;color:var(--muted)}
-.ok{color:var(--ok)}.wn{color:var(--warn)}.mu{color:var(--muted)}
+.ok{color:var(--ok)}.wn{color:var(--warn)}.bd{color:var(--danger)}.mu{color:var(--muted)}
 .ritem .chev{color:#B4BAC3;flex:none}
 .bhead{margin:2px 0 8px}.bhead b{font-size:21px;font-weight:700}.bhead span{display:block;font-size:13.5px;color:var(--muted);margin-top:2px}
 .bars{display:flex;align-items:flex-end;gap:10px;height:108px;border-bottom:1px solid var(--rule);position:relative;margin:10px 0 4px;padding:0 4px}
@@ -922,7 +922,9 @@ function rapWatch(){ if (rapWatchT || rapLoading) return; rapWatchT = setTimeout
 function rapOpenFiche(id){ rapParc = id; rapScreen = "batt"; $("rapView").classList.remove("hidden"); rapDraw(); }
 function rapOpen(){ rapScreen = "list"; $("rapView").classList.remove("hidden"); rapDraw(); rapLoad(); }
 function rapClose(){ $("rapView").classList.add("hidden"); $("rapToast").classList.add("hidden"); rapNote.last = null; }
-const pcClass = r => r.pc == null ? "mu" : r.pc >= 80 ? "ok" : "wn";
+// État de santé (26/11/2026) : vert ≥ 80 %, orange de 60 à 80 %, rouge sous 60 % (comme le rapport)
+const pcClass = r => r.pc == null ? "mu" : r.pc >= 80 ? "ok" : r.pc >= 60 ? "wn" : "bd";
+const pcVar = pc => pc >= 80 ? "ok" : pc >= 60 ? "warn" : "danger";
 const chev = '<svg class="chev" width="8" height="14" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>';
 function rapRowRight(r){
   if (r.it) return '<div class="r"><b class="mu">Interrompu</b></div>';
@@ -983,7 +985,7 @@ function rapBatt(){
   }
   [...pas].reverse().forEach(r => {
     const d = new Date(r.d || 0), ds = dd(r.d) + "/" + d.getFullYear();
-    const res = r.it ? '<em style="font-style:normal;color:var(--muted)">interrompu</em>' : r.pc != null ? '<em style="font-style:normal;color:var(--'+(r.pc >= 80 ? 'ok' : 'warn')+')">'+(r.ah != null ? r.ah + ' Ah · ' : '')+r.pc+' %</em>' : '';
+    const res = r.it ? '<em style="font-style:normal;color:var(--muted)">interrompu</em>' : r.pc != null ? '<em style="font-style:normal;color:var(--'+pcVar(r.pc)+')">'+(r.ah != null ? r.ah + ' Ah · ' : '')+r.pc+' %</em>' : '';
     h += '<div class="pitem"><div class="w"><b>'+ds+(res ? ' · ' + res : '')+'</b><span>'+esc([r.ot ? "OT " + r.ot : null, r.ma, r.au ? "autonomie " + r.au + (r.c5 ? " C5" : "") : r.mo, r.mc].filter(Boolean).join(" · "))+'</span></div>'
       + (r.pdf ? '<button class="pdf" data-pdf="'+esc(r.id)+'"><svg width="14" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>PDF</button>' : '')
       + '<button class="ml" data-mail="'+esc(r.id)+'" aria-label="Envoyer le rapport par mail"><svg width="20" height="15" viewBox="0 0 18 14" aria-hidden="true"><rect x="1" y="1" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.8 2l7.2 5.6L16.2 2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></div>';
