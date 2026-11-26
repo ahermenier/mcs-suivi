@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126185125">
+<meta name="mcs-build" content="20261126185251">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126185125') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126185251') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -669,11 +669,16 @@ function drawChart(key, pts){
     let tl = "+" + fmtH(best[0]);
     if (m.updated && m.h != null) { const d = new Date(m.updated - (m.h - best[0]) * 3600e3); tl = (d.toDateString() === new Date().toDateString() ? "Auj." : (w => w.charAt(0).toUpperCase() + w.slice(1))(d.toLocaleDateString("fr-FR", { weekday: "short" }))) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + "  ·  " + tl; }
     g.font = "600 " + (12 * k) + "px " + MONO; const tw = g.measureText(tl).width + 12 * k, bh = 19 * k;
-    const bx = Math.max(padL, Math.min(W - padR - tw, cx - tw / 2));   // centrée sur la ligne du curseur (sous le doigt, donc visible)
+    let bx = Math.max(padL, Math.min(W - padR - tw, cx - tw / 2));   // centrée sur la ligne du curseur
     // Zoomé : l'heure se met juste au-dessus du doigt (toujours à l'écran, jamais sous la bande floutée du haut de l'iPhone),
     // ou dessous si le doigt est tout en haut ; sans zoom : en haut du graphique comme avant
     let by = 2;
-    if (zs > 1.05 && cursor.y != null) { by = cursor.y - 64 * k; if (by < visTop + 50 * k) by = cursor.y + 40 * k; by = Math.min(Math.max(2, by), H - bh - 2); }
+    // Zoomé : 120 px (à l'écran) au-dessus du doigt, hors de la main ; doigt trop haut → à côté du doigt, jamais dessous
+    if (zs > 1.05 && cursor.y != null) {
+      by = cursor.y - 120 * k;
+      if (by < visTop + 50 * k) { by = cursor.y - bh / 2; bx = cx + 60 * k + tw <= W - padR ? cx + 60 * k : Math.max(padL, cx - 60 * k - tw); }
+      by = Math.min(Math.max(2, by), H - bh - 2);
+    }
     g.fillStyle = "#1F2A37"; roundRect(g, bx, by, tw, bh, 3 * k); g.fill();
     g.fillStyle = "#fff"; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(tl, bx + 6 * k, by + bh / 2 + 0.5 * k);
   }
