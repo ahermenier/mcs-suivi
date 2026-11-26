@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126194506">
+<meta name="mcs-build" content="20261126200326">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126194506') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126200326') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -92,6 +92,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background
 .acts{display:flex;justify-content:center;margin-top:10px}
 .acts button{width:45%;max-width:180px;height:42px;border-radius:4px;font:600 17px var(--sans);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);background:var(--card);color:var(--text)}
 .acts .stop{background:var(--danger);border-color:var(--danger);color:#fff}
+.acts .rep{background:#fff;border-color:var(--blue);color:var(--blue)}
+.acts .rep:disabled{border-color:var(--line);color:var(--muted);letter-spacing:0;text-transform:none;font-size:14px;font-weight:500}
 .acts{gap:10px}
 .acts .mail{width:42px;max-width:none;flex:none;padding:0;border-color:var(--blue);color:var(--blue);background:#fff;display:inline-flex;align-items:center;justify-content:center}
 .rcp{border-top:1px solid var(--line);margin-top:4px}
@@ -443,6 +445,7 @@ function render(){
   fitText();
   drawChart(selected, chartPts(machines[selected]));
   document.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => askAction(b.dataset.key, b.dataset.act)));
+  document.querySelectorAll("[data-rap]").forEach(b => b.addEventListener("click", () => { const m = machines[b.dataset.rap]; const r = m && m.report && rapFind(m.report.file, m.sim); if (r) rapOpenFiche(r.id); }));
 }
 // Une ligne trop longue pour sa case (petit écran) est réduite jusqu'à tenir, au lieu d'être coupée par « … »
 function fitText(){
@@ -588,12 +591,13 @@ function card(m, stale){
     h += '</div>';
   }
   // Arrêter (cycle en cours) + icône mail à droite (envoi du rapport, 26/11/2026 : à la demande seulement, le PC envoie)
-  const canMail = !stale && m.report && m.report.recips && m.report.recips.length;
-  if ((active && !stale) || canMail) {
-    h += '<div class="acts">';
-    if (active && !stale) h += '<button class="stop" data-act="stop" data-key="'+esc(m.key)+'">Arrêter</button>';
-    if (canMail) h += '<button class="mail" data-act="mail" data-key="'+esc(m.key)+'" aria-label="Envoyer le rapport par mail"><svg width="22" height="17" viewBox="0 0 18 14" aria-hidden="true"><rect x="1" y="1" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.8 2l7.2 5.6L16.2 2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>';
-    h += '</div>';
+  // Un seul bouton, centré, même taille (26/11/2026) : « Arrêter » pendant le cycle, « Rapport » une fois le cycle fini
+  // (ouvre la fiche de la batterie : PDF, historique, envoi par mail). Le PC copie le rapport quelques secondes après la fin.
+  if (active && !stale) h += '<div class="acts"><button class="stop" data-act="stop" data-key="'+esc(m.key)+'">Arrêter</button></div>';
+  else if (!active && m.finished && m.report && m.report.file) {
+    const ready = rapFind(m.report.file, m.sim);
+    h += '<div class="acts"><button class="rep" data-rap="'+esc(m.key)+'"'+(ready ? '' : ' disabled')+'>'+(ready ? 'Rapport' : 'Rapport en préparation…')+'</button></div>';
+    if (!ready) rapWatch();
   }
   if (stale && m.sim) h += '<div class="note">Simulateur fermé · dernières valeurs reçues il y a '+ago(rxAge(m))+'.</div>';
   if (pending[m.key]) h += '<div class="note">'+esc(pending[m.key])+'</div>';
@@ -896,6 +900,11 @@ async function rapLoad(){
   } catch(e){ rapIdx = rapIdx || []; $("rapMsg") && ($("rapMsg").textContent = "⚠ " + friendly(e.message)); }
   rapLoading = false; rapDraw();
 }
+// Rapport du cycle qui vient de finir : cherché dans l'index (relu toutes les 10 s tant qu'il n'y est pas)
+function rapFind(file, sim){ return (rapIdx || []).find(r => r.f === file && !!r.sim === !!sim); }
+let rapWatchT = null;
+function rapWatch(){ if (rapWatchT || rapLoading) return; rapWatchT = setTimeout(async () => { rapWatchT = null; if (!document.hidden) { await rapLoad(); scheduleRender(); } }, rapIdx ? 10000 : 300); }
+function rapOpenFiche(id){ rapParc = id; rapScreen = "batt"; $("rapView").classList.remove("hidden"); rapDraw(); }
 function rapOpen(){ rapScreen = "list"; $("rapView").classList.remove("hidden"); rapDraw(); rapLoad(); }
 function rapClose(){ $("rapView").classList.add("hidden"); }
 const pcClass = r => r.pc == null ? "mu" : r.pc >= 80 ? "ok" : "wn";
