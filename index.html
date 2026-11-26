@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126185750">
+<meta name="mcs-build" content="20261126190702">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126185750') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126190702') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -519,7 +519,9 @@ function card(m, stale){
       const raw = String(s.text || "").replace(/^terminée$/, "terminée");
       // Décharge C10 (choix C, 26/11) : « 5h00 C5 · −620 Ah · réel 10h00 C10 » → C5 en gras, durée réelle en petit
       const real = / · réel /.test(raw);
-      const t = raw.startsWith("prévue ") ? ["prévue", raw.slice(7)] : raw.includes(" / ") ? [raw.split(" / ")[0], "/ " + raw.split(" / ")[1]] : raw.includes(" · ") ? raw.split(" · ") : /^\S+ C\d+$/.test(raw) ? raw.split(" ") : [raw];
+      let t = raw.startsWith("prévue ") ? ["prévue", raw.slice(7)] : raw.includes(" / ") ? [raw.split(" / ")[0], "/ " + raw.split(" / ")[1]] : raw.includes(" · ") ? raw.split(" · ") : /^\S+ C\d+$/.test(raw) ? raw.split(" ") : [raw];
+      // Restauration : tension de fin retirée (inutile, 26/11/2026) → la capacité remonte sous la durée
+      if (!s.dis) t = t.filter((x, i) => i === 0 || !/^[\d\s.,]+V$/.test(x.trim()));
       return '<div class="step'+(later?' next':'')+'"><div class="box" style="background:'+bgc+'"><span class="sh"><b>'+s.no+'</b>'+arrow(s.dis)+'</span>'+(real ? '<span><b>'+esc(t[0])+'</b></span>' : '<span>'+esc(t[0])+'</span>')+'<span>'+esc(t[1]||'\u00a0')+'</span>'+(t.length > 2 ? '<span'+(real ? ' class="real"' : '')+'>'+esc(t.slice(2).join(' · '))+'</span>' : '')+'</div><div class="bar"><i style="width:'+Math.round(fr*100)+'%"></i></div></div>';
     }).join("") + '</div>';
   }
