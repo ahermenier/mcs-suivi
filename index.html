@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126204415">
+<meta name="mcs-build" content="20261126204702">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126204415') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126204702') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -936,9 +936,10 @@ function rapList(){
 }
 function rapListBody(){
   const machinesTxt = rapMachines();
-  const q = normP(rapQ), qt = rapQ.trim().toUpperCase();
-  const rows = (rapIdx || []).filter(r => (rapF === 0 || r.mc === machinesTxt[rapF])
-    && (!q || normP(r.pa).includes(q) || normP(r.ot).includes(q) || (qt && String(r.ma || "").toUpperCase().includes(qt))));
+  // Plusieurs mots (26/11/2026, « HC N12625 ») : chaque mot doit se trouver dans la marque, le N° de parc ou l'OT
+  const words = rapQ.trim().toUpperCase().split(/\s+/).filter(Boolean);
+  const hit = (r, w) => { const nw = normP(w); return (nw && (normP(r.pa).includes(nw) || normP(r.ot).includes(nw))) || String(r.ma || "").toUpperCase().includes(w) || (nw && normP(r.ma).includes(nw)); };
+  const rows = (rapIdx || []).filter(r => (rapF === 0 || r.mc === machinesTxt[rapF]) && words.every(w => hit(r, w)));
   let h = '<div class="rcount">'+(rapLoading && !rapIdx ? "Chargement…" : (rapQ ? rows.length + ' rapport'+(rows.length > 1 ? 's' : '')+' pour « '+esc(rapQ)+' »' : (rapIdx || []).length.toLocaleString("fr-FR") + ' rapports') + ' · disponibles même PC éteint')+'</div>'
     + '<div id="rapMsg"></div><div class="rlist">';
   if (!rapIdx && rapLoading) h += '<div class="rload">Chargement des rapports…</div>';
