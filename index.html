@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126182100">
+<meta name="mcs-build" content="20261126182933">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126182100') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126182933') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -75,7 +75,7 @@ main{flex:1;min-height:0;display:flex;flex-direction:column}
 .band .v{font:600 28px var(--mono);letter-spacing:0;line-height:1.15;white-space:nowrap}
 .band .v small{font:600 15px var(--sans);letter-spacing:0;margin-left:2px}
 .band .c{font:400 11.5px var(--mono);color:#777}
-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#fff}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#fff;touch-action:pinch-zoom;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .steps{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;margin-top:8px;align-items:stretch;border-top:1px solid var(--rule)}
 .step{min-width:0;display:flex;flex-direction:column;border-left:1px solid var(--line);position:relative}
 .step:first-child{border-left:0}
@@ -387,7 +387,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitT
 addEventListener("resize", () => fitText());
 // Glisser à gauche / à droite pour changer de machine
 (() => { let x0 = null, y0 = 0;
-  document.addEventListener("touchstart", e => { if (e.target.closest(".modal")) return; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive:true });
+  document.addEventListener("touchstart", e => { if (e.target.closest(".modal") || e.target.closest("canvas")) { x0 = null; return; } x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive:true });
   document.addEventListener("touchend", e => {
     if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
     if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
@@ -583,11 +583,12 @@ function drawChart(key, pts){
   }
   // bandes
   const totalW = LANES.reduce((a, l) => a + l[3], 0), avail = 1 - GAP * (LANES.length - 1);
-  let pos = 0; const pills = [];   // pastilles de valeur dessinées en dernier (par-dessus les séparateurs)
+  let pos = 0; const pills = [], laneInfo = [];   // pastilles de valeur dessinées en dernier (par-dessus les séparateurs)
   LANES.forEach(([unit, idx, col, wgt], li) => {
     const hgt = avail * wgt / totalW, top = padT + ph * pos, bot = padT + ph * (pos + hgt); pos += hgt + GAP;
     const [mn, mx] = laneRange(li, idx);
     const Y = v => bot - (v - mn) / (mx - mn) * (bot - top);
+    laneInfo.push({ unit, idx, col, Y, top, bot });
     const n = (bot - top) >= 150 ? 4 : (bot - top) >= 60 ? 2 : 1;
     g.font = "500 10.5px " + MONO; g.textAlign = "right"; g.textBaseline = "middle";
     for (let i = 0; i <= n; i++) {
@@ -633,7 +634,51 @@ function drawChart(key, pts){
     g.fillStyle = dis ? "#B86A28" : "#2F64A8"; g.font = "600 11px " + MONO; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(st.no || sg[2]), cx, 11.5);
   });
   pills.forEach(f => f());
+  // Curseur (26/11/2026) : doigt posé ou glissé sur le graphique → ligne verticale, point et valeur sur chaque courbe, heure
+  cv._cur = { padL, pw, xmax };
+  if (cursor && cursor.key === key) {
+    const t = Math.max(0, Math.min(xmax, (cursor.x - padL) / pw * xmax));
+    let best = pts[0]; for (const p of pts) if (Math.abs(p[0] - t) < Math.abs(best[0] - t)) best = p;
+    const cx = X(best[0]);
+    g.strokeStyle = "#1F2A37"; g.lineWidth = 1; g.setLineDash([]);
+    laneInfo.forEach(l => { g.beginPath(); g.moveTo(cx + 0.5, l.top); g.lineTo(cx + 0.5, l.bot); g.stroke(); });
+    const right = cx < padL + pw * 0.62;   // valeurs du côté où il y a de la place
+    laneInfo.forEach(l => {
+      const v = best[l.idx]; if (v == null || isNaN(v)) return;
+      const y = Math.max(l.top, Math.min(l.bot, l.Y(v)));
+      g.fillStyle = "#fff"; g.beginPath(); g.arc(cx, y, 4.5, 0, 7); g.fill();
+      g.fillStyle = l.col; g.beginPath(); g.arc(cx, y, 3.2, 0, 7); g.fill();
+      const lab = (l.unit === "°C" ? Math.round(v) : num(v, l.unit === "V" ? 1 : 0)) + " " + l.unit;
+      g.font = "700 13px " + MONO; const tw = g.measureText(lab).width;
+      const lx = right ? cx + 8 : cx - 8 - tw, ly = Math.min(Math.max(y - 12, l.top + 8), l.bot - 8);
+      g.textAlign = "left"; g.textBaseline = "middle"; g.lineJoin = "round"; g.lineWidth = 4; g.strokeStyle = "#fff"; g.strokeText(lab, lx, ly);
+      g.fillStyle = l.col; g.fillText(lab, lx, ly);
+    });
+    // heure : depuis le départ, et heure du jour (calculée sur l'heure du PC)
+    let tl = "+" + fmtH(best[0]);
+    if (m.updated && m.h != null) { const d = new Date(m.updated - (m.h - best[0]) * 3600e3); tl = d.toLocaleDateString("fr-FR", { weekday: "short" }) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + "  ·  " + tl; }
+    g.font = "600 12px " + MONO; const tw = g.measureText(tl).width + 12;
+    const bx = Math.max(padL, Math.min(W - padR - tw, cx - tw / 2));
+    g.fillStyle = "#1F2A37"; roundRect(g, bx, 2, tw, 19, 3); g.fill();
+    g.fillStyle = "#fff"; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(tl, bx + 6, 11.5);
+  }
 }
+// Curseur : suit le doigt sur le graphique, s'efface 4 s après qu'on le lâche (ou d'un appui ailleurs)
+let cursor = null, cursorTimer = null;
+function cursorAt(e, cv){
+  const r = cv.getBoundingClientRect(), t = e.touches ? e.touches[0] : e;
+  cursor = { key: cv.id.slice(2), x: t.clientX - r.left };
+  clearTimeout(cursorTimer); drawChart(cursor.key, chartPts(machines[cursor.key]));
+}
+function cursorOff(delay){
+  clearTimeout(cursorTimer);
+  cursorTimer = setTimeout(() => { const k = cursor && cursor.key; cursor = null; if (k && machines[k]) drawChart(k, chartPts(machines[k])); }, delay);
+}
+// un doigt = curseur ; deux doigts = zoom normal (le curseur s'efface)
+document.addEventListener("touchstart", e => { const cv = e.target.closest && e.target.closest("canvas[id^='c_']"); if (cv && e.touches.length === 1) cursorAt(e, cv); else if (cursor) cursorOff(0); }, { passive: true });
+document.addEventListener("touchmove", e => { const cv = e.target.closest && e.target.closest("canvas[id^='c_']"); if (cv && e.touches.length === 1 && cursor) { e.preventDefault(); cursorAt(e, cv); } }, { passive: false });
+document.addEventListener("touchend", e => { if (cursor) cursorOff(4000); }, { passive: true });
+document.addEventListener("mousedown", e => { const cv = e.target.closest && e.target.closest("canvas[id^='c_']"); if (cv) { cursorAt(e, cv); cursorOff(4000); } });
 function roundRect(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x+r, y); g.arcTo(x+w, y, x+w, y+h, r); g.arcTo(x+w, y+h, x, y+h, r); g.arcTo(x, y+h, x, y, r); g.arcTo(x, y, x+w, y, r); g.closePath(); }
 function fmtH(h){ const m = Math.round(h*60); if (h < 1) return h*3600 < 60 ? Math.round(h*3600) + "s" : Math.max(1, m) + "min"; return Math.floor(m/60) + "h" + String(m%60).padStart(2,"0"); }
 
