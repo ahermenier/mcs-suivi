@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126130940">
+<meta name="mcs-build" content="20261126134200">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126130940') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126134200') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -90,6 +90,15 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background
 .acts{display:flex;justify-content:center;margin-top:10px}
 .acts button{width:45%;max-width:180px;height:42px;border-radius:4px;font:600 17px var(--sans);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);background:var(--card);color:var(--text)}
 .acts .stop{background:var(--danger);border-color:var(--danger);color:#fff}
+.acts{gap:10px}
+.acts .mail{width:42px;max-width:none;flex:none;padding:0;border-color:var(--blue);color:var(--blue);background:#fff;display:inline-flex;align-items:center;justify-content:center}
+.rcp{border-top:1px solid var(--line);margin-top:4px}
+.rcp label{display:flex;align-items:center;gap:12px;margin:0;padding:11px 2px;border-bottom:1px solid var(--line);font:inherit;letter-spacing:0;text-transform:none;color:var(--ink)}
+.rcp input{width:22px;height:22px;flex:none;accent-color:var(--blue);margin:0}
+.rcp .who{flex:1;min-width:0}.rcp .who b{display:block;font-size:16px;font-weight:600}
+.rcp .who span{display:block;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rcp .st{font-size:12.5px;text-align:right;color:var(--muted);line-height:1.25;flex:none}.rcp .st.ok{color:var(--ok)}.rcp .st.ok b{font-weight:600}
+.sheet .row2 .go:disabled{opacity:.4}
 .note{font:400 13px var(--sans);margin-top:6px;color:var(--muted)}
 .stale{background:var(--warnSoft);color:var(--warn);border-left:4px solid var(--warn);padding:8px 10px;font-size:13.5px;font-weight:600;margin:0 0 10px}
 .login{max-width:380px;margin:12vh auto 0;padding:0 16px}
@@ -153,6 +162,7 @@ input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   <div class="sheet">
     <h2 id="mTitle">Arrêter</h2>
     <p id="mText"></p>
+    <div id="mList" class="rcp hidden"></div>
 
     <div class="row2"><button id="mCancel">Annuler</button><button id="mGo" class="go">Confirmer</button></div>
   </div>
@@ -444,9 +454,13 @@ function card(m, stale){
     if (active && m.end) h += '<span>Fin estimée <b>'+esc(m.end)+'</b></span>';
     h += '</div>';
   }
-  if (active && !stale) {
+  // Arrêter (cycle en cours) + icône mail à droite (envoi du rapport, 26/11/2026 : à la demande seulement, le PC envoie)
+  const canMail = !stale && m.report && m.report.recips && m.report.recips.length;
+  if ((active && !stale) || canMail) {
     h += '<div class="acts">';
-    h += '<button class="stop" data-act="stop" data-key="'+esc(m.key)+'">Arrêter</button></div>';
+    if (active && !stale) h += '<button class="stop" data-act="stop" data-key="'+esc(m.key)+'">Arrêter</button>';
+    if (canMail) h += '<button class="mail" data-act="mail" data-key="'+esc(m.key)+'" aria-label="Envoyer le rapport par mail"><svg width="22" height="17" viewBox="0 0 18 14" aria-hidden="true"><rect x="1" y="1" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.8 2l7.2 5.6L16.2 2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>';
+    h += '</div>';
   }
   if (stale && m.sim) h += '<div class="note">Simulateur fermé · dernières valeurs reçues il y a '+ago(Date.now() - (m.updated||0))+'.</div>';
   if (pending[m.key]) h += '<div class="note">'+esc(pending[m.key])+'</div>';
@@ -546,6 +560,8 @@ let modalCtx = null;
 function askAction(key, act){
   const m = machines[key]; if (!m) return;
   modalCtx = { key, act };
+  $("mList").classList.add("hidden"); $("mGo").className = "go"; $("mGo").disabled = false;
+  if (act === "mail") { askMail(m); return; }
   if (act !== "stop") return;
   $("mTitle").textContent = "Arrêter " + m.name + " ?";
   $("mText").textContent = "Le programme" + (m.id ? " de " + m.id : "") + " sera arrêté. Il ne pourra pas être relancé depuis le téléphone.";
@@ -553,8 +569,49 @@ function askAction(key, act){
   $("modal").classList.remove("hidden");
 }
 $("mCancel").addEventListener("click", () => { $("modal").classList.add("hidden"); modalCtx = null; });
+// ---------- envoi du rapport : choix parmi les destinataires réglés sur le PC, le PC envoie ----------
+function askMail(m){
+  const r = m.report;
+  $("mTitle").textContent = "Envoyer le rapport";
+  $("mText").textContent = [m.id, m.ot ? "OT " + m.ot : null, (m.running || m.paused) ? "cycle en cours : rapport à ce stade" : m.finished ? "fin " + m.finished.slice(0,5) + " " + m.finished.slice(11) : null].filter(Boolean).join(" · ") + (r.ok ? "" : " — boîte d'envoi non réglée sur le PC");
+  $("mList").innerHTML = r.recips.map(x => '<label><input type="checkbox" value="'+x.i+'"><span class="who"><b>'+esc(x.name)+'</b><span>'+esc(x.mail)+'</span></span>'
+    + (x.last ? '<span class="st ok"><b>envoyé</b><br>'+esc(x.last)+'</span>' : '<span class="st">jamais<br>envoyé</span>') + '</label>').join("");
+  $("mList").classList.remove("hidden");
+  $("mGo").textContent = "Envoyer"; $("mGo").className = "go neutral";
+  const upd = () => { $("mGo").disabled = !r.ok || !$("mList").querySelector("input:checked"); };
+  $("mList").querySelectorAll("input").forEach(i => i.addEventListener("change", upd)); upd();
+  modalCtx.file = r.file;
+  $("modal").classList.remove("hidden");
+}
+async function sendMail(key, file){
+  const to = Array.from($("mList").querySelectorAll("input:checked")).map(i => +i.value);
+  if (!to.length) return;
+  const at = Date.now();
+  pending[key] = "Demande envoyée au PC de l'atelier…"; render();
+  try { await dbPut("mailreq/" + key, { at, file, to }); waitMail(key, at, 0); }
+  catch(err){ pending[key] = "⚠ Envoi impossible : " + friendly(err.message); render(); }
+}
+async function waitMail(key, at, n){
+  try {
+    const c = await dbGet("mailreq/" + key);
+    if (c && c.at === at && c.result) {
+      if (c.result === "sending") pending[key] = "Le PC envoie le mail…";
+      else {
+        pending[key] = c.result === "ok" ? "Rapport envoyé à " + (c.names || "") + " (" + (c.sentAt || "") + ")." : "⚠ " + c.result.charAt(0).toUpperCase() + c.result.slice(1) + ".";
+        render(); setTimeout(() => { delete pending[key]; refresh(); }, 15000); refresh(); return;
+      }
+      render();
+    }
+  } catch(e){}
+  if (n >= 40) {
+    // Sans réponse : demande annulée, pour qu'aucun mail ne parte plus tard sans qu'on s'y attende
+    try { const c = await dbGet("mailreq/" + key); if (c && c.at === at && !c.result) await dbPut("mailreq/" + key, { ...c, result: "annulé : pas de réponse de MCS Studio", done: Date.now() }); } catch(e){}
+    pending[key] = "⚠ Pas de réponse du PC de l'atelier. Demande annulée : vérifiez que le PC est allumé et MCS Studio ouvert."; render(); return; }
+  setTimeout(() => waitMail(key, at, n+1), 1500);
+}
 $("mGo").addEventListener("click", async () => {
   const { key, act } = modalCtx; $("modal").classList.add("hidden");
+  if (act === "mail") { sendMail(key, modalCtx.file); return; }
   const at = Date.now();
   pending[key] = "Ordre envoyé, en attente de MCS Studio (jusqu'à 20 s)…"; render();
   try {
