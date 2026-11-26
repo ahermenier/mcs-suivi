@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261125225026">
+<meta name="mcs-build" content="20261126063656">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261125225026') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126063656') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -120,11 +120,11 @@ input{width:100%;height:46px;border:1px solid var(--line);border-radius:10px;pad
 <section id="loginView" class="login hidden">
   <h1>MCS Suivi</h1>
   <p>Connexion une seule fois sur ce téléphone, avec le compte créé dans Firebase.</p>
-  <form id="loginForm">
+  <form id="loginForm" method="post" action="#">
     <label for="email">Adresse mail</label>
-    <input id="email" type="email" autocomplete="username" required>
+    <input id="email" name="username" type="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required>
     <label for="pass">Mot de passe</label>
-    <input id="pass" type="password" autocomplete="current-password" required>
+    <input id="pass" name="password" type="password" autocomplete="current-password" required>
     <button class="primary" type="submit" id="loginBtn">Se connecter</button>
     <div class="err" id="loginErr"></div>
   </form>
@@ -212,7 +212,11 @@ function friendly(msg){
 }
 
 // ---------- écrans ----------
-function showLogin(){ $("appView").classList.add("hidden"); $("loginView").classList.remove("hidden"); clearInterval(timer); timer = null; closeStream(); }
+let loginFormHome = null, loginFormEl = null;
+function showLogin(){
+  if (!loginFormEl) loginFormEl = $("loginForm");
+  if (loginFormHome && !loginFormEl.isConnected) { loginFormEl.querySelector("#pass").value = ""; loginFormHome.appendChild(loginFormEl); }
+  $("appView").classList.add("hidden"); $("loginView").classList.remove("hidden"); clearInterval(timer); timer = null; closeStream(); }
 function showApp(){
   $("loginView").classList.add("hidden"); $("appView").classList.remove("hidden");
   refresh(); loadHist(); openStream();
@@ -254,10 +258,20 @@ async function loadHist(){ try { hists = await dbGet("hist") || {}; scheduleRend
 
 $("loginForm").addEventListener("submit", async e => {
   e.preventDefault();
-  $("loginErr").textContent = ""; $("loginBtn").disabled = true; $("loginBtn").textContent = "Connexion…";
-  try { await signIn($("email").value.trim(), $("pass").value); $("pass").value = ""; showApp(); }
-  catch(err){ $("loginErr").textContent = friendly(err.message); }
-  finally { $("loginBtn").disabled = false; $("loginBtn").textContent = "Se connecter"; }
+  const btn = $("loginBtn"), errEl = $("loginErr");   // références gardées : le formulaire peut sortir du DOM
+  errEl.textContent = ""; btn.disabled = true; btn.textContent = "Connexion…";
+  try {
+    await signIn($("email").value.trim(), $("pass").value);
+    // Trousseau iOS : Safari propose d'enregistrer quand le formulaire disparaît
+    // après une connexion réussie, avec les champs encore remplis. On le retire
+    // du DOM, puis on le remet vidé plus tard.
+    const f = $("loginForm"), p = $("pass");
+    loginFormEl = f; loginFormHome = f.parentNode; f.remove();
+    showApp();
+    setTimeout(() => { p.value = ""; }, 4000);
+  }
+  catch(err){ errEl.textContent = friendly(err.message); }
+  finally { btn.disabled = false; btn.textContent = "Se connecter"; }
 });
 $("logoutBtn").addEventListener("click", () => { if (confirm("Se déconnecter de ce téléphone ?")) { store.set("mcs_refresh", null); idToken = null; showLogin(); } });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && timer) { refresh(); loadHist(); if (!es) openStream(); } });
