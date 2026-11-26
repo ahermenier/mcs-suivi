@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126184003">
+<meta name="mcs-build" content="20261126184640">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126184003') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126184640') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -468,6 +468,8 @@ setInterval(() => {
 }, 1000);
 // Pincement pour zoomer : le graphique est redessiné à la nouvelle échelle (sinon il est agrandi comme une image, flou)
 let zoomTimer = null, lastZoom = 1;
+// Zoomé et déplacé avec le doigt : l'heure du curseur suit la partie visible
+if (window.visualViewport) visualViewport.addEventListener("scroll", () => { if (cursor && machines[cursor.key]) drawChart(cursor.key, chartPts(machines[cursor.key])); });
 if (window.visualViewport) visualViewport.addEventListener("resize", () => {
   if (Math.abs(visualViewport.scale - lastZoom) < 0.05) return;
   clearTimeout(zoomTimer); zoomTimer = setTimeout(() => { lastZoom = visualViewport.scale; if (selected && machines[selected]) drawChart(selected, chartPts(machines[selected])); }, 120);
@@ -644,27 +646,33 @@ function drawChart(key, pts){
     const t = Math.max(0, Math.min(xmax, (cursor.x - padL) / pw * xmax));
     let best = pts[0]; for (const p of pts) if (Math.abs(p[0] - t) < Math.abs(best[0] - t)) best = p;
     const cx = X(best[0]);
-    g.strokeStyle = "#1F2A37"; g.lineWidth = 1; g.setLineDash([]);
+    // Zoomé : textes du curseur gardés à leur taille à l'écran, heure posée en haut de la partie VISIBLE du graphique
+    const vv = window.visualViewport, zs = Math.max(1, (vv && vv.scale) || 1), k = 1 / zs;
+    const rc = cv.getBoundingClientRect();
+    const visTop = vv ? Math.max(0, vv.offsetTop - rc.top) : 0, visLeft = vv ? Math.max(0, vv.offsetLeft - rc.left) : 0;
+    const visRight = vv ? Math.min(W, vv.offsetLeft + vv.width - rc.left) : W, visBot = vv ? Math.min(H, vv.offsetTop + vv.height - rc.top) : H;
+    g.strokeStyle = "#1F2A37"; g.lineWidth = Math.max(0.6, k); g.setLineDash([]);
     laneInfo.forEach(l => { g.beginPath(); g.moveTo(cx + 0.5, l.top); g.lineTo(cx + 0.5, l.bot); g.stroke(); });
     const right = cx < padL + pw * 0.62;   // valeurs du côté où il y a de la place
     laneInfo.forEach(l => {
       const v = best[l.idx]; if (v == null || isNaN(v)) return;
       const y = Math.max(l.top, Math.min(l.bot, l.Y(v)));
-      g.fillStyle = "#fff"; g.beginPath(); g.arc(cx, y, 4.5, 0, 7); g.fill();
-      g.fillStyle = l.col; g.beginPath(); g.arc(cx, y, 3.2, 0, 7); g.fill();
+      g.fillStyle = "#fff"; g.beginPath(); g.arc(cx, y, 4.5 * k, 0, 7); g.fill();
+      g.fillStyle = l.col; g.beginPath(); g.arc(cx, y, 3.2 * k, 0, 7); g.fill();
       const lab = (l.unit === "°C" ? Math.round(v) : num(v, l.unit === "V" ? 1 : 0)) + " " + l.unit;
-      g.font = "700 13px " + MONO; const tw = g.measureText(lab).width;
-      const lx = right ? cx + 8 : cx - 8 - tw, ly = Math.min(Math.max(y - 12, l.top + 8), l.bot - 8);
-      g.textAlign = "left"; g.textBaseline = "middle"; g.lineJoin = "round"; g.lineWidth = 4; g.strokeStyle = "#fff"; g.strokeText(lab, lx, ly);
+      g.font = "700 " + (13 * k) + "px " + MONO; const tw = g.measureText(lab).width;
+      const lx = right ? cx + 8 * k : cx - 8 * k - tw, ly = Math.min(Math.max(y - 12 * k, l.top + 8 * k), l.bot - 8 * k);
+      g.textAlign = "left"; g.textBaseline = "middle"; g.lineJoin = "round"; g.lineWidth = 4 * k; g.strokeStyle = "#fff"; g.strokeText(lab, lx, ly);
       g.fillStyle = l.col; g.fillText(lab, lx, ly);
     });
     // heure : depuis le départ, et heure du jour (calculée sur l'heure du PC)
     let tl = "+" + fmtH(best[0]);
     if (m.updated && m.h != null) { const d = new Date(m.updated - (m.h - best[0]) * 3600e3); tl = (d.toDateString() === new Date().toDateString() ? "Auj." : d.toLocaleDateString("fr-FR", { weekday: "short" })) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + "  ·  " + tl; }
-    g.font = "600 12px " + MONO; const tw = g.measureText(tl).width + 12;
-    const bx = Math.max(padL, Math.min(W - padR - tw, cx - tw / 2));
-    g.fillStyle = "#1F2A37"; roundRect(g, bx, 2, tw, 19, 3); g.fill();
-    g.fillStyle = "#fff"; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(tl, bx + 6, 11.5);
+    g.font = "600 " + (12 * k) + "px " + MONO; const tw = g.measureText(tl).width + 12 * k, bh = 19 * k;
+    const bx = Math.max(Math.max(padL, visLeft + 2 * k), Math.min(Math.min(W - padR, visRight - 2 * k) - tw, cx - tw / 2));
+    const by = Math.min(Math.max(2, visTop + 4 * k), Math.max(2, visBot - bh - 2 * k));
+    g.fillStyle = "#1F2A37"; roundRect(g, bx, by, tw, bh, 3 * k); g.fill();
+    g.fillStyle = "#fff"; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(tl, bx + 6 * k, by + bh / 2 + 0.5 * k);
   }
 }
 // Curseur : suit le doigt sur le graphique, s'efface 4 s après qu'on le lâche (ou d'un appui ailleurs)
