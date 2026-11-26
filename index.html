@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126155842">
+<meta name="mcs-build" content="20261126173528">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126155842') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126173528') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -61,6 +61,8 @@ main{flex:1;min-height:0;display:flex;flex-direction:column}
 .state{display:flex;align-items:center;gap:7px;font:600 13.5px var(--sans);letter-spacing:.05em;text-transform:uppercase}
 .simchip{font:500 11px var(--mono);letter-spacing:.06em;color:#8A5A00;border:1px solid #8A5A00;padding:0 5px}
 .fresh .live{display:inline-block;width:6px;height:6px;background:var(--ok);margin-right:5px;vertical-align:1px}
+.fresh.bad{color:var(--warn);font-weight:600}.fresh.bad .live{background:var(--warn)}
+#list.old .band .v{opacity:.4}
 .idl{font-size:14.5px;color:#444;margin-top:5px}
 .idl b{color:var(--ink);font-weight:600}
 .res{border-left:4px solid;padding:7px 10px;margin-top:9px}
@@ -248,7 +250,7 @@ async function openStream(){
   es = new EventSource(CFG.db + "/state.json?auth=" + encodeURIComponent(idToken));
   const onData = (e, merge) => {
     let d; try { d = JSON.parse(e.data); } catch(x){ return; }
-    applyAt(d.path, d.data, merge); scheduleRender();
+    applyAt(d.path, d.data, merge); noteRx(); scheduleRender();
   };
   es.addEventListener("put", e => onData(e, false));
   es.addEventListener("patch", e => onData(e, true));
@@ -308,8 +310,8 @@ function stateStyle(m){
 async function refresh(){
   try {
     const data = await dbGet("state") || {};
-    machines = data;
-    render();
+    machines = data; netDown = false;
+    noteRx(); render();
   } catch(err){
     if (err.message === "NOLOGIN") { showLogin(); return; }
     $("upd").textContent = "⚠ " + friendly(err.message); $("upd").classList.remove("hidden");
@@ -331,8 +333,8 @@ function render(){
   // Atelier (vraies machines) d'abord ; le simulateur après. Chaque machine juge sa propre fraîcheur.
   keys.sort((a, b) => (machines[a].sim ? 1 : 0) - (machines[b].sim ? 1 : 0) || a.localeCompare(b));
   const real = keys.filter(k => !machines[k].sim);
-  const newestReal = Math.max(0, ...real.map(k => machines[k].updated || 0));
-  const stale = real.length > 0 && now - newestReal > 30000;
+  const freshest = real.length ? Math.min(...real.map(k => rxAge(machines[k]))) : 0;
+  const stale = real.length > 0 && (netDown || freshest > STALE_MS);
   if (!keys.length) {
     $("tabs").classList.add("hidden"); $("single").classList.add("hidden");
     $("list").innerHTML = '<div class="empty">Aucune machine reçue pour l\'instant.<br>Vérifiez dans MCS Studio : Réglages › Suivi téléphone.</div>'; return;
@@ -356,8 +358,12 @@ function render(){
   $("single").textContent = keys.length > 1 ? "" : (m.name || "");
   const showStale = !m.sim && stale;
   $("stale").classList.toggle("hidden", !showStale);
-  if (showStale) $("stale").textContent = "MCS Studio n'envoie plus rien depuis " + ago(now - newestReal) + " : PC éteint, MCS Studio fermé ou pas d'Internet à l'atelier. Dernières valeurs reçues ci-dessous.";
-  $("list").innerHTML = card(m, now - (m.updated || 0) > 30000);
+  if (showStale) $("stale").textContent = netDown
+    ? "Téléphone sans Internet : les valeurs ci-dessous ne sont plus à jour. Elles reprendront seules au retour du réseau."
+    : "Plus rien reçu de MCS Studio depuis " + (freshest < 60000 ? Math.round(freshest/1000) + " s" : ago(freshest)) + " : PC éteint, MCS Studio fermé ou pas d'Internet à l'atelier. Dernières valeurs reçues ci-dessous.";
+  $("list").innerHTML = card(m, isStale(m));
+  // Valeurs plus en direct (rien reçu depuis 12 s, téléphone hors ligne, machine muette) : grisées, pour ne pas les croire actuelles
+  $("list").classList.toggle("old", notLive(m));
   fitText();
   drawChart(selected, chartPts(machines[selected]));
   document.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => askAction(b.dataset.key, b.dataset.act)));
@@ -404,12 +410,53 @@ function chartPts(m){
 }
 let needTimer = null;
 function needHist(){ if (!needTimer) needTimer = setTimeout(() => { needTimer = null; loadHist(); }, 1500); }
-function freshTxt(m){
-  const age = Date.now() - (m.updated || 0);
-  if (!m.updated) return '<span class="fresh"></span>';
-  if (age < 20000) return '<span class="fresh"><span class="live"></span>en direct</span>';
-  return '<span class="fresh">il y a ' + (age < 60000 ? Math.round(age/1000) + ' s' : ago(age)) + '</span>';
+// Fraîcheur (26/11/2026) : jugée à l'heure de RÉCEPTION sur le téléphone, jamais à l'horloge du PC (elle peut avancer de
+// plusieurs minutes et laissait « en direct » affiché après une coupure). Le PC envoie toutes les 5 s : plus rien depuis
+// 12 s = plus en direct. Coupure Internet du téléphone détectée à part (hors ligne).
+const LIVE_MS = 12000, STALE_MS = 30000, pageStart = Date.now();
+let rxAt = {}, rxUpd = {}, lastRxAny = 0, netDown = !navigator.onLine;
+function noteRx(){
+  const now = Date.now();
+  for (const k in machines) {
+    const m = machines[k]; if (!m || typeof m !== "object" || !m.updated) continue;
+    if (rxUpd[k] === undefined) { rxUpd[k] = m.updated; continue; }           // première valeur : fraîcheur encore inconnue
+    if (m.updated !== rxUpd[k]) { rxUpd[k] = m.updated; rxAt[k] = now; lastRxAny = now; }
+  }
 }
+// Âge des dernières valeurs reçues (ms) ; au tout début, avant le 2e envoi du PC : estimé avec l'heure du PC
+function rxAge(m){
+  const k = m && m.key; if (!k) return Infinity;
+  if (rxAt[k]) return Date.now() - rxAt[k];
+  const est = Math.max(0, Date.now() - (m.updated || 0));
+  return Date.now() - pageStart < LIVE_MS ? 0 : Math.max(est, Date.now() - pageStart);
+}
+function notLive(m){ return !!m.updated && (netDown || rxAge(m) > LIVE_MS || ((m.running || m.paused) && linkAge(m) > 15000)); }
+function isStale(m){ return netDown || rxAge(m) > STALE_MS; }
+// Liaison machine ↔ PC : les deux heures viennent du PC (pas d'écart d'horloge)
+function linkAge(m){ return m && m.updated && m.lastSeen && m.updated - m.lastSeen > 0 ? m.updated - m.lastSeen + (rxAt[m.key] ? Date.now() - rxAt[m.key] : 0) : 0; }
+function freshTxt(m){
+  if (!m.updated) return '<span class="fresh"></span>';
+  if (netDown) return '<span class="fresh bad"><span class="live"></span>téléphone hors ligne</span>';
+  const age = rxAge(m);
+  if (Date.now() - pageStart < LIVE_MS && !rxAt[m.key]) return '<span class="fresh">connexion…</span>';
+  if (age > LIVE_MS) return '<span class="fresh bad"><span class="live"></span>reçu il y a ' + (age < 60000 ? Math.round(age/1000) + ' s' : ago(age)) + '</span>';
+  const la = linkAge(m);
+  if ((m.running || m.paused) && la > 15000) return '<span class="fresh bad"><span class="live"></span>machine muette ' + (la < 60000 ? Math.round(la/1000) + ' s' : ago(la)) + '</span>';
+  return '<span class="fresh"><span class="live"></span>en direct</span>';
+}
+// Toutes les secondes : texte de fraîcheur à jour ; carte redessinée quand l'état bascule (boutons, bandeau)
+let lastLiveSig = "";
+setInterval(() => {
+  if (!timer) return;
+  const m = machines[selected]; if (!m) return;
+  const el = document.querySelector(".card .fresh, .fresh"); if (el) el.outerHTML = freshTxt(m);
+  const sig = netDown + "|" + isStale(m) + "|" + notLive(m);
+  if (sig !== lastLiveSig) { lastLiveSig = sig; scheduleRender(); }
+  // Plus rien reçu depuis 15 s alors que le réseau est là : on rouvre le flux (il peut rester figé après une coupure)
+  if (!netDown && lastRxAny && Date.now() - lastRxAny > 15000 && Date.now() - (window._reopenAt || 0) > 15000) { window._reopenAt = Date.now(); openStream(); refresh(); }
+}, 1000);
+window.addEventListener("offline", () => { netDown = true; scheduleRender(); });
+window.addEventListener("online", () => { netDown = false; if (timer) { openStream(); refresh(); loadHist(); } scheduleRender(); });
 function ago(ms){ const m = Math.round(ms/60000); return m < 60 ? m + " min" : Math.floor(m/60) + "h" + String(m%60).padStart(2,"0"); }
 
 function card(m, stale){
@@ -462,7 +509,7 @@ function card(m, stale){
     if (canMail) h += '<button class="mail" data-act="mail" data-key="'+esc(m.key)+'" aria-label="Envoyer le rapport par mail"><svg width="22" height="17" viewBox="0 0 18 14" aria-hidden="true"><rect x="1" y="1" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.8 2l7.2 5.6L16.2 2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>';
     h += '</div>';
   }
-  if (stale && m.sim) h += '<div class="note">Simulateur fermé · dernières valeurs reçues il y a '+ago(Date.now() - (m.updated||0))+'.</div>';
+  if (stale && m.sim) h += '<div class="note">Simulateur fermé · dernières valeurs reçues il y a '+ago(rxAge(m))+'.</div>';
   if (pending[m.key]) h += '<div class="note">'+esc(pending[m.key])+'</div>';
   return h + '</div>';
 }
