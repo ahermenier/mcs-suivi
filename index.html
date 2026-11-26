@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126182933">
+<meta name="mcs-build" content="20261126183118">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126182933') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126183118') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -656,7 +656,7 @@ function drawChart(key, pts){
     });
     // heure : depuis le départ, et heure du jour (calculée sur l'heure du PC)
     let tl = "+" + fmtH(best[0]);
-    if (m.updated && m.h != null) { const d = new Date(m.updated - (m.h - best[0]) * 3600e3); tl = d.toLocaleDateString("fr-FR", { weekday: "short" }) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + "  ·  " + tl; }
+    if (m.updated && m.h != null) { const d = new Date(m.updated - (m.h - best[0]) * 3600e3); tl = (d.toDateString() === new Date().toDateString() ? "Auj." : d.toLocaleDateString("fr-FR", { weekday: "short" })) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + "  ·  " + tl; }
     g.font = "600 12px " + MONO; const tw = g.measureText(tl).width + 12;
     const bx = Math.max(padL, Math.min(W - padR - tw, cx - tw / 2));
     g.fillStyle = "#1F2A37"; roundRect(g, bx, 2, tw, 19, 3); g.fill();
