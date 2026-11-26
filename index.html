@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126181700">
+<meta name="mcs-build" content="20261126182100">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126181700') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126182100') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -71,7 +71,7 @@ main{flex:1;min-height:0;display:flex;flex-direction:column}
 .band{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-top:9px}
 .band>div{padding:5px 8px 6px;border-left:1px solid var(--line);min-width:0}
 .band>div:first-child{border-left:0;padding-left:0}
-.band .l{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.band .l{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
 .band .v{font:600 28px var(--mono);letter-spacing:0;line-height:1.15;white-space:nowrap}
 .band .v small{font:600 15px var(--sans);letter-spacing:0;margin-left:2px}
 .band .c{font:400 11.5px var(--mono);color:#777}
@@ -462,6 +462,12 @@ setInterval(() => {
   // Plus rien reçu depuis 15 s alors que le réseau est là : on rouvre le flux (il peut rester figé après une coupure)
   if (!netDown && lastRxAny && Date.now() - lastRxAny > 15000 && Date.now() - (window._reopenAt || 0) > 15000) { window._reopenAt = Date.now(); openStream(); refresh(); }
 }, 1000);
+// Pincement pour zoomer : le graphique est redessiné à la nouvelle échelle (sinon il est agrandi comme une image, flou)
+let zoomTimer = null, lastZoom = 1;
+if (window.visualViewport) visualViewport.addEventListener("resize", () => {
+  if (Math.abs(visualViewport.scale - lastZoom) < 0.05) return;
+  clearTimeout(zoomTimer); zoomTimer = setTimeout(() => { lastZoom = visualViewport.scale; if (selected && machines[selected]) drawChart(selected, chartPts(machines[selected])); }, 120);
+});
 window.addEventListener("offline", () => { netDown = true; scheduleRender(); });
 window.addEventListener("online", () => { netDown = false; if (timer) { openStream(); refresh(); loadHist(); } scheduleRender(); });
 function ago(ms){ const m = Math.round(ms/60000); return m < 60 ? m + " min" : Math.floor(m/60) + "h" + String(m%60).padStart(2,"0"); }
@@ -485,7 +491,7 @@ function card(m, stale){
   if (m.v != null) {
     h += '<div class="band"><div><div class="l">Tension</div><div class="v" style="color:var(--volt)">'+num(m.v,1)+'<small>V</small></div><div class="c">'+(active?'cons. '+num(m.setV,1):'&nbsp;')+'</div></div>';
     h += '<div><div class="l">Courant</div><div class="v" style="color:var(--amp)">'+num(m.a,1)+'<small>A</small></div><div class="c">'+(active?'cons. '+num(m.setA,1):'&nbsp;')+'</div></div>';
-    h += '<div><div class="l">Temp.</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+'<small>°C</small>')+'</div><div class="c">'+(active?'batterie':'&nbsp;')+'</div></div></div>';
+    h += '<div><div class="l">Température</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+'<small>°C</small>')+'</div><div class="c">'+(active?'batterie':'&nbsp;')+'</div></div></div>';
   }
   const hh = chartPts(m);
   h += '<div class="chartbox">' + (hh && hh.length > 1 ? '<canvas id="c_'+esc(m.key)+'"></canvas>' : '<div class="empty" style="margin-top:18%">'+(active ? 'La courbe apparaît à la première mesure du cycle' : 'Machine au repos')+'</div>') + '</div>';
@@ -542,7 +548,9 @@ function axisLabel(mn, mx, i, n, unit){
 function drawChart(key, pts){
   const cv = document.getElementById("c_" + key); if (!cv || !pts || pts.length < 2) return;
   const m = machines[key] || {};
-  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  // Net même zoomé (26/11/2026) : dessin à la résolution de l'écran × zoom du pincement, plafonné (limite des iPhone ≈ 16 Mpx)
+  const W = cv.clientWidth, H = cv.clientHeight, zoom = Math.max(1, (window.visualViewport && visualViewport.scale) || 1);
+  const dpr = Math.min((window.devicePixelRatio || 1) * zoom, Math.sqrt(16e6 / Math.max(1, W * H)));
   cv.width = W*dpr; cv.height = H*dpr;
   const g = cv.getContext("2d"); g.scale(dpr, dpr);
   const padR = 8, padT = 24, padB = 18, ph = H - padT - padB;
