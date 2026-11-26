@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png?v=2">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126071112">
+<meta name="mcs-build" content="20261126075511">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,96 +22,100 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126071112') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261126075511') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#EEF1F5;--card:#fff;--line:#DCE2EA;--text:#1B2430;--muted:#5B687A;--volt:#3A6DAE;--amp:#C97B36;--temp:#8463B3;--ok:#17914F;--okSoft:#E3F4EA;--warn:#B86A00;--warnSoft:#FCEFD9;--danger:#C3352B;--dangerSoft:#FBE7E5;--blue:#1F5FD1;--ampCell:#EFCFB2;--voltCell:#C6D7EE;--ampNext:#F6E6D8;--voltNext:#E3EBF5}
+/* Style « instrument » : filets fins, chiffres d'afficheur (IBM Plex Mono), texte en IBM Plex Sans Condensed.
+   La couleur ne sert qu'à dire quelque chose : tension / courant / température, décharge / restauration, état. */
+:root{--bg:#fff;--card:#fff;--ink:#1F2A37;--rule:#C9CED6;--line:#DDE1E6;--text:#1F2A37;--muted:#5E6875;--volt:#2F64A8;--amp:#B86A28;--temp:#7556A8;--ok:#178A4C;--okSoft:#EAF5EE;--warn:#8A5A00;--warnSoft:#FBF1DE;--danger:#C42F24;--dangerSoft:#FBEAE8;--blue:#1F5FA8;--ampCell:#F7E6D8;--voltCell:#E3EBF6;--sans:'IBM Plex Sans Condensed',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace}
 *{box-sizing:border-box}
-html,body{margin:0;background:#fff;color:var(--text);font-family:Nunito,system-ui,sans-serif;-webkit-text-size-adjust:100%}
+html,body{margin:0;background:#fff;color:var(--text);font-family:var(--sans);-webkit-text-size-adjust:100%}
 /* iPhone (iOS 26) : le système floute une bande sous l'heure et la batterie, même hors de la barre d'état.
    Rien d'écrit dans cette bande : la page commence par les onglets, un peu plus bas ; « Mis à jour » passe en bas. */
-
-#appView{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 8px calc(4px + env(safe-area-inset-bottom))}
+#appView{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 12px calc(4px + env(safe-area-inset-bottom))}
 header{display:flex;align-items:center;justify-content:space-between;padding:6px 4px 0;gap:8px;order:9}
 header .sub{font-size:12px;color:var(--muted)}
-.link{border:0;background:none;color:var(--muted);font:600 13px Nunito,sans-serif;padding:6px 2px}
-.topbar{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.link{border:0;background:none;color:var(--muted);font:600 13px var(--sans);padding:6px 2px}
+.topbar{display:flex;align-items:flex-end;gap:8px;margin-bottom:10px;border-bottom:1px solid var(--rule)}
 .topbar .tabs{flex:1;margin:0}
-.single{flex:1;font-size:19px;font-weight:800;padding-left:2px}
-.out{flex:none;width:40px;height:40px;border-radius:12px;border:0;background:#E8ECF1;color:var(--muted);display:flex;align-items:center;justify-content:center}
-.tabs{display:flex;gap:4px;background:#E8ECF1;border-radius:12px;padding:3px;margin-bottom:8px}
-.fresh{font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap}
-.tabs button{flex:1;min-width:0;border:0;background:none;border-radius:9px;height:38px;font:700 15px Nunito,sans-serif;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;overflow:hidden}
-.tabs button.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.tabs .sim{font-size:11px;font-weight:600;color:var(--muted)}
+.single{flex:1;font-size:19px;font-weight:700;padding:0 0 7px 0}
+.out{flex:none;width:36px;height:38px;border:0;background:none;color:var(--muted);display:flex;align-items:center;justify-content:flex-end;padding:0 0 4px}
+.tabs{display:flex;gap:0}
+.fresh{font:400 12px var(--mono);color:var(--muted);margin-left:auto;white-space:nowrap}
+.tabs button{flex:1;min-width:0;border:0;background:none;border-radius:0;height:40px;font:600 17px var(--sans);color:#8A8A8A;display:flex;align-items:center;justify-content:flex-start;gap:7px;white-space:nowrap;overflow:hidden;padding:0 2px}
+.tabs button.on{color:var(--ink);box-shadow:inset 0 -3px 0 var(--blue)}
+.tabs .sim{font:500 11px var(--mono);color:#8A8A8A;letter-spacing:.04em}
 main{flex:1;min-height:0;display:flex;flex-direction:column}
-
-.card{flex:1;min-height:0;display:flex;flex-direction:column;padding:2px 2px 0}
-.chartbox{flex:1;min-height:150px;margin-top:10px;position:relative}
+.card{flex:1;min-height:0;display:flex;flex-direction:column;padding:0}
+.chartbox{flex:1;min-height:150px;margin-top:8px;position:relative}
 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.name{font-size:19px;font-weight:800}
-.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
-.pill{font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px}
-.simchip{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#9A5B00;background:#FDF0DC;border:1px solid #F3C98B;padding:2px 8px;border-radius:20px}
-.fresh .live{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:4px;vertical-align:1px}
-.idl{font-size:13px;color:var(--muted);margin-top:2px}
-.idl b{color:var(--text)}
-.res{border-radius:10px;padding:10px 12px;margin-top:10px;border:1px solid}
-.res .t{font-size:18px;font-weight:800}
-.res .s{font-size:12px;color:var(--muted);margin-top:2px}
-.band{display:grid;grid-template-columns:repeat(3,1fr);background:#F3F5F8;border:1px solid var(--line);border-radius:12px;margin-top:10px;padding:6px 0}
-.band div{text-align:center;border-left:1px solid var(--line)}
-.band div:first-child{border-left:0}
-.band .l{font-size:12px;color:var(--muted)}
-.band .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
-.band .c{font-size:11px;color:var(--muted)}
-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;border:1px solid var(--line);border-radius:8px;background:#fff}
-.steps{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;margin-top:10px;align-items:stretch}
-.step{min-width:0;display:flex;flex-direction:column}
-.step .box{flex:1;border-radius:6px;padding:4px 5px;font-size:11px;line-height:1.25;color:#3B2A1A;overflow:hidden;white-space:nowrap}
+.name{font-size:19px;font-weight:700}
+.dot{width:8px;height:8px;display:inline-block;flex:none}
+.state{display:flex;align-items:center;gap:7px;font:600 13.5px var(--sans);letter-spacing:.05em;text-transform:uppercase}
+.simchip{font:500 11px var(--mono);letter-spacing:.06em;color:#8A5A00;border:1px solid #8A5A00;padding:0 5px}
+.fresh .live{display:inline-block;width:6px;height:6px;background:var(--ok);margin-right:5px;vertical-align:1px}
+.idl{font-size:14.5px;color:#444;margin-top:5px}
+.idl b{color:var(--ink);font-weight:600}
+.res{border-left:4px solid;padding:7px 10px;margin-top:9px}
+.res .t{font-size:18px;font-weight:700}
+.res .s{font:400 13px var(--sans);color:var(--muted);margin-top:1px}
+.band{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-top:9px}
+.band>div{padding:5px 8px 6px;border-left:1px solid var(--line);min-width:0}
+.band>div:first-child{border-left:0;padding-left:0}
+.band .l{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.band .v{font:500 26px var(--mono);letter-spacing:-.03em;line-height:1.15;white-space:nowrap}
+.band .v small{font:600 15px var(--sans);letter-spacing:0;margin-left:2px}
+.band .c{font:400 11.5px var(--mono);color:#777}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#fff}
+.steps{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;margin-top:8px;align-items:stretch;border-top:1px solid var(--rule)}
+.step{min-width:0;display:flex;flex-direction:column;border-left:1px solid var(--line);position:relative}
+.step:first-child{border-left:0}
+.step .box{flex:1;padding:6px 5px 5px;font:400 11px/1.3 var(--mono);color:#333;overflow:hidden;white-space:nowrap}
 .step .box span{display:block;overflow:hidden;text-overflow:ellipsis}
-.step .box .sh{display:flex;align-items:center;gap:4px;font-size:12px;margin-bottom:1px}
+.step .box .sh{display:flex;align-items:center;gap:3px;font:600 13.5px var(--sans);color:var(--ink);margin-bottom:1px}
 .step .box .arr{flex:none}
-.step .box b{font-weight:800}
-.step .bar{height:4px;border-radius:2px;background:#D5DBE3;margin-top:3px;overflow:hidden}
-.step .bar i{display:block;height:100%;background:var(--ok)}
-.times{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px;gap:8px;flex-wrap:wrap}
-.times b{color:var(--text)}
+.step .box b{font-weight:600}
+.step.next .box{color:#9A9A9A}.step.next .box .sh{color:#9A9A9A}
+.step .bar{position:absolute;left:0;right:0;top:-1px;height:3px;background:transparent;overflow:hidden}
+.step .bar i{display:block;height:100%}
+.times{display:flex;justify-content:space-between;font:400 13px var(--sans);color:#666;margin-top:0;padding-top:6px;border-top:1px solid var(--line);gap:8px;flex-wrap:wrap}
+.times b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
 .acts{display:flex;justify-content:center;margin-top:10px}
-.acts button{width:60%;max-width:240px;height:40px;border-radius:12px;font:700 16px Nunito,sans-serif;border:1px solid var(--line);background:var(--card);color:var(--text)}
+.acts button{width:100%;height:46px;border-radius:4px;font:600 17px var(--sans);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);background:var(--card);color:var(--text)}
 .acts .stop{background:var(--danger);border-color:var(--danger);color:#fff}
-.note{font-size:13px;margin-top:8px;color:var(--muted)}
-.stale{background:var(--warnSoft);color:var(--warn);border-radius:10px;padding:8px 10px;font-size:13px;font-weight:600;margin:0 0 12px}
+.note{font:400 13px var(--sans);margin-top:6px;color:var(--muted)}
+.stale{background:var(--warnSoft);color:var(--warn);border-left:4px solid var(--warn);padding:8px 10px;font-size:13.5px;font-weight:600;margin:0 0 10px}
 .login{max-width:380px;margin:12vh auto 0;padding:0 16px}
-.login h1{font-size:26px;font-weight:800;margin:0 0 4px}
-.login p{color:var(--muted);font-size:14px;margin:0 0 18px}
-label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
-input{width:100%;height:46px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:600 16px Nunito,sans-serif;background:#fff;color:var(--text)}
-.primary{width:100%;height:48px;border:0;border-radius:12px;background:var(--blue);color:#fff;font:700 16px Nunito,sans-serif;margin-top:16px}
+.login h1{font-size:28px;font-weight:700;margin:0 0 4px;padding-bottom:6px;border-bottom:1px solid var(--rule)}
+.login p{color:var(--muted);font-size:14.5px;margin:8px 0 18px}
+label{display:block;font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:12px 0 4px}
+input{width:100%;height:46px;border:1px solid #C3C9D2;border-radius:3px;padding:0 12px;font:500 16px var(--sans);background:#fff;color:var(--text)}
+input:focus{outline:2px solid var(--blue);outline-offset:-1px}
+.primary{width:100%;height:48px;border:0;border-radius:4px;background:var(--blue);color:#fff;font:600 17px var(--sans);letter-spacing:.04em;margin-top:18px}
 .err{color:var(--danger);font-size:14px;margin-top:10px;min-height:20px}
 .empty{text-align:center;color:var(--muted);margin-top:20vh;font-size:15px}
-.modal{position:fixed;inset:0;background:rgba(20,28,40,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
-.sheet{background:#fff;width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
-.sheet h2{margin:0 0 4px;font-size:19px;font-weight:800}
-.sheet p{margin:0 0 10px;color:var(--muted);font-size:14px}
-.pin{letter-spacing:12px;text-align:center;font-size:26px;font-weight:800}
+.modal{position:fixed;inset:0;background:rgba(17,17,17,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet{background:#fff;width:100%;max-width:520px;border-radius:12px 12px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+.sheet h2{margin:0 0 4px;font-size:20px;font-weight:700}
+.sheet p{margin:0 0 10px;color:var(--muted);font-size:14.5px}
+.pin{letter-spacing:12px;text-align:center;font-size:26px;font-weight:700}
 .sheet .row2{display:flex;gap:8px;margin-top:14px}
-.sheet .row2 button{flex:1;height:48px;border-radius:12px;font:700 16px Nunito,sans-serif;border:1px solid var(--line);background:#fff}
+.sheet .row2 button{flex:1;height:48px;border-radius:4px;font:600 17px var(--sans);border:1px solid #C3C9D2;background:#fff;color:var(--ink)}
 .sheet .row2 .go{background:var(--danger);border-color:var(--danger);color:#fff}
 .sheet .row2 .go.neutral{background:var(--blue);border-color:var(--blue)}
 .hidden{display:none!important}
 @media (max-height:720px){
-  .band .v{font-size:20px}.band .l,.band .c{font-size:11px}
+  .res{padding:5px 8px;margin-top:7px}.res .t{font-size:16px}.res .s{font-size:12px}
+  .band .v{font-size:21px}.band .v small{font-size:13px}.band .l,.band .c{font-size:10.5px}
   .chartbox{min-height:170px}
-  .step .box{font-size:10px;min-height:30px;padding:3px 4px}
-  .times{font-size:11px;margin-top:6px}
-  .acts button{height:38px}
-  .card{padding:0}
+  .step .box{font-size:10px;min-height:30px;padding:4px 4px 3px}.step .box .sh{font-size:12.5px}
+  .times{font-size:12px}.note{font-size:12px;margin-top:4px}
+  .acts button{height:40px}
 }
 </style>
 </head>
@@ -327,7 +331,7 @@ function render(){
   tabs.innerHTML = keys.map(k => {
     const m = machines[k], dot = stateStyle(m)[2];
     const short = (m.name || k).replace(/ · simulateur$/, "").replace(/^MCS /, "");
-    return '<button data-sel="'+esc(k)+'" class="'+(k===selected?'on':'')+'"><span class="dot" style="background:'+dot+'"></span>MCS '+esc(short)+(m.sim?' <span class="sim">sim.</span>':'')+'</button>';
+    return '<button data-sel="'+esc(k)+'" class="'+(k===selected?'on':'')+'"><span class="dot" style="background:'+dot+'"></span>MCS '+esc(short)+(m.sim?' <span class="sim">SIM</span>':'')+'</button>';
   }).join("");
   tabs.querySelectorAll("[data-sel]").forEach(b => b.addEventListener("click", () => { selected = b.dataset.sel; store.set("mcs_sel", selected); render(); }));
   const m = machines[selected];
@@ -399,30 +403,31 @@ function card(m, stale){
   let h = '<div class="card">';
   // Le nom est déjà dans l'onglet : la carte commence directement par l'état
   h += '<div class="row">';
-  h += '<span class="pill" style="color:'+fg+';background:'+bg+'">'+esc(m.state)+(active && m.kind ? ' · '+esc(m.kind) : '')+'</span>'+freshTxt(m)+(m.sim ? '<span class="simchip">Simulation</span>' : '')+'</div>';
+  h += '<span class="state" style="color:'+fg+'"><span class="dot" style="background:'+dot+'"></span>'+esc(m.state)+(active && m.kind ? ' · '+esc(m.kind) : '')+'</span>'+freshTxt(m)+(m.sim && !tabsShown ? '<span class="simchip">SIMULATION</span>' : '')+'</div>';
   const idp = [m.id ? '<b>'+esc(m.id)+'</b>' : '', m.ot ? 'OT N°'+esc(m.ot) : '', esc(m.battery||"")].filter(Boolean);
   if (idp.length) h += '<div class="idl">'+idp.join(' · ')+'</div>';
   if (!active && m.finished) {
     const ok = m.state === "Terminé", err = (m.state||"").includes("erreur");
     const c = ok ? "var(--ok)" : err ? "var(--danger)" : "var(--muted)";
-    const b = ok ? "var(--okSoft)" : err ? "var(--dangerSoft)" : "#F3F5F8";
-    h += '<div class="res" style="border-color:'+c+';background:'+b+'"><div class="t">'+esc(m.result || m.state)+'</div><div class="s">'+esc(m.finishLine || ((m.kind||"Programme")+' '+(ok?'terminé':'arrêté')+' le '+m.finished.replace(' ',' à ')))+'</div></div>';
+    const b = ok ? "var(--okSoft)" : err ? "var(--dangerSoft)" : "#F2F2F2";
+    h += '<div class="res" style="border-left-color:'+c+';background:'+b+'"><div class="t">'+esc(m.result || m.state)+'</div><div class="s">'+esc(m.finishLine || ((m.kind||"Programme")+' '+(ok?'terminé':'arrêté')+' le '+m.finished.replace(' ',' à ')))+'</div></div>';
   }
   if (m.v != null) {
-    h += '<div class="band"><div><div class="l">Tension</div><div class="v" style="color:var(--volt)">'+num(m.v,1)+' V</div><div class="c">'+(active?'consigne '+num(m.setV,1):'&nbsp;')+'</div></div>';
-    h += '<div><div class="l">Courant</div><div class="v" style="color:var(--amp)">'+num(m.a,1)+' A</div><div class="c">'+(active?'consigne '+num(m.setA,1):'&nbsp;')+'</div></div>';
-    h += '<div><div class="l">Température</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+' °C')+'</div><div class="c">'+(active?'batterie':'&nbsp;')+'</div></div></div>';
+    h += '<div class="band"><div><div class="l">Tension</div><div class="v" style="color:var(--volt)">'+num(m.v,1)+'<small>V</small></div><div class="c">'+(active?'cons. '+num(m.setV,1):'&nbsp;')+'</div></div>';
+    h += '<div><div class="l">Courant</div><div class="v" style="color:var(--amp)">'+num(m.a,1)+'<small>A</small></div><div class="c">'+(active?'cons. '+num(m.setA,1):'&nbsp;')+'</div></div>';
+    h += '<div><div class="l">Temp.</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+'<small>°C</small>')+'</div><div class="c">'+(active?'batterie':'&nbsp;')+'</div></div></div>';
   }
   const hh = chartPts(m);
   h += '<div class="chartbox">' + (hh && hh.length > 1 ? '<canvas id="c_'+esc(m.key)+'"></canvas>' : '<div class="empty" style="margin-top:18%">'+(active ? 'La courbe apparaît à la première mesure du cycle' : 'Machine au repos')+'</div>') + '</div>';
   if (m.steps && m.steps.length) {
     h += '<div class="steps">' + m.steps.map(s => {
-      const bgc = (s.state === "next" || s.state === "skip") ? (s.dis ? "var(--ampNext)" : "var(--voltNext)") : (s.dis ? "var(--ampCell)" : "var(--voltCell)");
+      const later = s.state === "next" || s.state === "skip";
+      const bgc = later ? "transparent" : (s.dis ? "var(--ampCell)" : "var(--voltCell)"), col = s.dis ? "var(--amp)" : "var(--volt)";
       const fr = s.state === "done" ? 1 : s.state === "now" ? (s.frac||0) : 0;
       // Toujours 3 lignes (n°, type, durée) : toutes les cases ont la même hauteur et les barres sont alignées
       const raw = String(s.text || "").replace(/^terminée$/, "terminée");
       const t = raw.startsWith("prévue ") ? ["prévue", raw.slice(7)] : raw.includes(" / ") ? [raw.split(" / ")[0], "/ " + raw.split(" / ")[1]] : raw.includes(" · ") ? raw.split(" · ") : /^\S+ C\d+$/.test(raw) ? raw.split(" ") : [raw];
-      return '<div class="step"><div class="box" style="background:'+bgc+'"><span class="sh"><b>'+s.no+'</b>'+arrow(s.dis)+'</span><span>'+esc(t[0])+'</span><span>'+esc(t[1]||'\u00a0')+'</span>'+(t.length > 2 ? '<span>'+esc(t.slice(2).join(' · '))+'</span>' : '')+'</div><div class="bar"><i style="width:'+Math.round(fr*100)+'%"></i></div></div>';
+      return '<div class="step'+(later?' next':'')+'"><div class="box" style="background:'+bgc+'"><span class="sh"><b>'+s.no+'</b>'+arrow(s.dis)+'</span><span>'+esc(t[0])+'</span><span>'+esc(t[1]||'\u00a0')+'</span>'+(t.length > 2 ? '<span>'+esc(t.slice(2).join(' · '))+'</span>' : '')+'</div><div class="bar"><i style="width:'+Math.round(fr*100)+'%;background:'+col+'"></i></div></div>';
     }).join("") + '</div>';
   }
   if (m.start) {
@@ -440,13 +445,13 @@ function card(m, stale){
   return h + '</div>';
 }
 
-// Pastille ronde : flèche vers le bas = décharge (orange), vers le haut = restauration (bleu)
+// Flèche simple : vers le bas = décharge (orangé), vers le haut = restauration (bleu)
 function arrow(dis){
-  return '<svg class="arr" width="15" height="15" viewBox="0 0 16 16" aria-label="'+(dis?'Décharge':'Restauration')+'"><circle cx="8" cy="8" r="8" fill="'+(dis?'#B5642A':'#2F63A8')+'"/><path d="'+(dis?'M8 4v7M5 8.2l3 3 3-3':'M8 12V5M5 7.8l3-3 3 3')+'" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return '<svg class="arr" width="12" height="14" viewBox="0 0 12 14" aria-label="'+(dis?'Décharge':'Restauration')+'"><path d="'+(dis?'M6 1.5v10M2 7.5l4 4 4-4':'M6 12.5v-10M2 6.5l4-4 4 4')+'" stroke="'+(dis?'#B86A28':'#2F64A8')+'" stroke-width="2" fill="none" stroke-linecap="square"/></svg>';
 }
 // Graphique dessiné comme celui du PC : 3 bandes (tension 45 %, courant 33 %, température 22 %, écart 6 %),
 // échelles envoyées par le PC (même calcul), graduations et repères de temps identiques, pastilles d'étapes en haut.
-const LANES = [["V",1,"#3A6DAE",0.45],["A",2,"#C97B36",0.33],["°C",3,"#8463B3",0.22]], GAP = 0.06;
+const LANES = [["V",1,"#2F64A8",0.45],["A",2,"#B86A28",0.33],["°C",3,"#7556A8",0.22]], GAP = 0.06;
 function niceStep(xmax){ const st=[10/3600,30/3600,1/60,2/60,5/60,0.25,0.5,1,2,4,6,12,24,48]; for (const s of st) if (xmax/s <= 10) return s; return 96; }
 function hourLabel(x, step){
   if (step >= 1) return Math.round(x) + "h";
@@ -470,9 +475,9 @@ function drawChart(key, pts){
   const lastX = pts[pts.length-1][0];
   const xmax = Math.max(sc ? sc[6] : lastX, lastX, 1/60);
   const X = t => padL + Math.min(t, xmax) / xmax * pw;
-  const grid = "#EDF0F4";
+  const grid = "#ECECEC", MONO = "IBM Plex Mono, ui-monospace, monospace";
   // repères de temps (tracés avant les courbes pour ne pas les hachurer)
-  const step = niceStep(xmax); g.font = "600 10.5px Nunito, sans-serif"; g.fillStyle = "#5B687A"; g.textBaseline = "alphabetic";
+  const step = niceStep(xmax); g.font = "400 10.5px " + MONO; g.fillStyle = "#666"; g.textBaseline = "alphabetic";
   const every = Math.max(1, Math.ceil((xmax / step + 1) / 6));   // au plus 6 libellés sur un téléphone
   let k = 0;
   for (let x = 0; x <= xmax + 1e-9; x += step, k++) {
@@ -489,31 +494,30 @@ function drawChart(key, pts){
     if (sc) { mn = sc[li*2]; mx = sc[li*2+1]; }
     else { const vals = pts.map(p => p[idx]).filter(x => x != null); mn = Math.min(...vals); mx = Math.max(...vals); if (mx - mn < 1) { mx += 1; mn -= 1; } }
     const Y = v => bot - (v - mn) / (mx - mn) * (bot - top);
-    g.fillStyle = col; g.fillRect(padL - 6, top, 3, bot - top);
     const n = (bot - top) >= 150 ? 4 : (bot - top) >= 60 ? 2 : 1;
-    g.font = "600 10.5px Nunito, sans-serif"; g.textAlign = "right"; g.textBaseline = "middle";
+    g.font = "500 10.5px " + MONO; g.textAlign = "right"; g.textBaseline = "middle";
     for (let i = 0; i <= n; i++) {
       const y = top + (bot - top) * i / n;
       g.strokeStyle = grid; g.lineWidth = 1; g.beginPath(); g.moveTo(padL, y + 0.5); g.lineTo(W - padR, y + 0.5); g.stroke();
-      g.fillStyle = col; g.fillText(axisLabel(mn, mx, i, n, unit), padL - 10, Math.min(Math.max(y, top + 6), bot - 6));   // reste dans sa bande : pas de chevauchement avec la bande voisine
+      g.fillStyle = col; g.fillText(axisLabel(mn, mx, i, n, unit), padL - 6, Math.min(Math.max(y, top + 6), bot - 6));   // reste dans sa bande : pas de chevauchement avec la bande voisine
     }
     const line = () => { g.beginPath(); let st = false; pts.forEach(p => { const v = p[idx]; if (v == null || isNaN(v)) return; const x = X(p[0]), y = Math.max(top, Math.min(bot, Y(v))); st ? g.lineTo(x, y) : g.moveTo(x, y); st = true; }); };
-    line(); g.lineTo(X(lastX), bot); g.lineTo(X(pts[0][0]), bot); g.closePath(); g.globalAlpha = 0.08; g.fillStyle = col; g.fill(); g.globalAlpha = 1;
-    line(); g.strokeStyle = col; g.lineWidth = 1.8; g.stroke();
+    line(); g.strokeStyle = col; g.lineWidth = 1.6; g.lineJoin = "round"; g.stroke();
     const lv = [...pts].reverse().find(p => p[idx] != null);
     if (lv) pills.push(() => {
       const lab = (unit === "°C" ? Math.round(lv[idx]) : num(lv[idx], unit === "V" ? 1 : 0)) + " " + unit;
-      g.font = "700 11px Nunito, sans-serif"; const tw = g.measureText(lab).width + 10;
-      const ly = Math.min(Math.max(Y(lv[idx]), top + 8), bot - 8);
-      let lx = X(lastX) + 4; if (lx + tw > W - padR) lx = X(lastX) - tw - 4;
-      g.fillStyle = col; roundRect(g, lx, ly - 8, tw, 16, 8); g.fill();
-      g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(lab, lx + tw/2, ly + 0.5);
+      g.font = "600 11px " + MONO; const tw = g.measureText(lab).width;
+      const vy = Math.max(top, Math.min(bot, Y(lv[idx]))), ly = Math.min(Math.max(vy - 11, top + 7), bot - 7);
+      const px = X(lastX); let lx = px - 4 - tw; if (lx < padL + 2) lx = px + 6;
+      g.fillStyle = col; g.fillRect(px - 2.5, vy - 2.5, 5, 5);
+      g.textAlign = "left"; g.textBaseline = "middle"; g.lineJoin = "round"; g.lineWidth = 4; g.strokeStyle = "#fff"; g.strokeText(lab, lx, ly);
+      g.fillStyle = col; g.fillText(lab, lx, ly);
     });
   });
   // étapes : séparateurs et pastilles
   const segs = []; let s0 = 0;
   for (let i = 1; i <= pts.length; i++) if (i === pts.length || pts[i][4] !== pts[s0][4]) { segs.push([pts[s0][0], i < pts.length ? pts[i][0] : pts[i-1][0], pts[s0][4]]); s0 = i; }
-  g.setLineDash([3,3]); g.strokeStyle = "#7A8696"; g.lineWidth = 1;
+  g.setLineDash([3,3]); g.strokeStyle = "#8A94A3"; g.lineWidth = 1;
   segs.slice(1).forEach(sg => { const x = X(sg[0]); g.beginPath(); g.moveTo(x, padT - 4); g.lineTo(x, H - padB); g.stroke(); });
   g.setLineDash([]);
   const info = m.steps || [];
@@ -522,8 +526,7 @@ function drawChart(key, pts){
     const st = info.find(x => x.slot === sg[2]) || {}, x0 = X(sg[0]), x1 = X(sg[1]);
     if (x1 - x0 < 14) return;
     const cx = (x0 + x1) / 2, dis = st.dis;
-    g.fillStyle = dis ? "#F6E6D8" : "#E3EBF5"; g.beginPath(); g.arc(cx, 11, 8, 0, Math.PI*2); g.fill();
-    g.fillStyle = dis ? "#8A4A1A" : "#24497A"; g.font = "700 10px Nunito, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(st.no || sg[2]), cx, 11.5);
+    g.fillStyle = dis ? "#B86A28" : "#2F64A8"; g.font = "600 11px " + MONO; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(st.no || sg[2]), cx, 11.5);
   });
   pills.forEach(f => f());
 }
