@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261127123917">
+<meta name="mcs-build" content="20261127124628">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261127123917') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261127124628') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -115,7 +115,7 @@ input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 .primary{width:100%;height:48px;border:0;border-radius:4px;background:var(--blue);color:#fff;font:600 17px var(--sans);letter-spacing:.04em;margin-top:18px}
 .err{color:var(--danger);font-size:14px;margin-top:10px;min-height:20px}
 .empty{text-align:center;color:var(--muted);margin-top:20vh;font-size:15px}
-.modal{position:fixed;inset:0;background:rgba(17,17,17,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.modal{position:fixed;inset:0;background:rgba(17,17,17,.45);display:flex;align-items:flex-end;justify-content:center;z-index:30}
 .sheet{background:#fff;width:100%;max-width:520px;border-radius:12px 12px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
 .sheet h2{margin:0 0 4px;font-size:20px;font-weight:700}
 .sheet p{margin:0 0 10px;color:var(--muted);font-size:14.5px}
@@ -190,13 +190,15 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
 .blab{overflow:hidden}.bars{margin-top:30px !important}
 .bars .th{z-index:2}.bars .th i{background:#fff;padding:0 3px}
 /* Suivi de l'envoi par mail : bandeau en haut de l'écran Rapports, visible quel que soit le défilement */
-#rapToast{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 74px);z-index:16;max-width:616px;margin:0 auto;background:#1F2A37;color:#fff;
+#rapToast{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 74px);z-index:31;max-width:616px;margin:0 auto;background:#1F2A37;color:#fff;
   font:500 14px var(--sans);padding:10px 12px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
 #rapToast.ok{background:var(--ok)}#rapToast.bad{background:var(--danger)}
 #pdfView{position:fixed;inset:0;background:#E9ECF0;z-index:25;display:flex;flex-direction:column}
 #pdfView .ptop{display:flex;align-items:flex-end;gap:8px;background:#fff;border-bottom:1px solid var(--rule);padding:calc(env(safe-area-inset-top) + 28px) 12px 8px}
 #pdfView .ptop .back{border:0;background:none;color:var(--blue);font:600 16px var(--sans);padding:0;height:28px}
 #pdfView .ptop b{flex:1;text-align:center;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pdfView .ptop .ml{border:0;background:none;color:var(--blue);padding:0 6px;height:28px;display:inline-flex;align-items:center}
+#pdfHist{border:0;border-bottom:1px solid var(--rule);background:#fff;color:var(--blue);font:600 14px var(--sans);padding:9px 12px;text-align:left}
 #pdfView .ptop .share{border:0;background:none;color:var(--blue);font:600 16px var(--sans);padding:0;height:28px}
 #pdfPages{flex:1;overflow:auto;padding:10px 8px calc(10px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
 #pdfPages canvas{position:static;display:block;width:100%;height:auto;margin:0 auto 10px;box-shadow:0 1px 4px rgba(0,0,0,.15);background:#fff;touch-action:auto}
@@ -236,7 +238,7 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
 <div id="curBar" class="hidden"></div>
 <div id="rapView" class="hidden"></div>
 <div id="rapToast" class="hidden"></div>
-<div id="pdfView" class="hidden"><div class="ptop"><button class="back" id="pdfBack">‹ Retour</button><b id="pdfTitle"></b><button class="share" id="pdfShare">Partager</button></div><div id="pdfPages"></div></div>
+<div id="pdfView" class="hidden"><div class="ptop"><button class="back" id="pdfBack">‹ Retour</button><b id="pdfTitle"></b><button class="ml" id="pdfMail" aria-label="Envoyer le rapport par mail"><svg width="22" height="17" viewBox="0 0 18 14" aria-hidden="true"><rect x="1" y="1" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.8 2l7.2 5.6L16.2 2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><button class="share" id="pdfShare">Partager</button></div><button id="pdfHist" class="hidden"></button><div id="pdfPages"></div></div>
 <div id="modal" class="modal hidden">
   <div class="sheet">
     <h2 id="mTitle">Arrêter</h2>
@@ -457,7 +459,7 @@ function render(){
   fitText();
   drawChart(selected, chartPts(machines[selected]));
   document.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => askAction(b.dataset.key, b.dataset.act)));
-  document.querySelectorAll("[data-rap]").forEach(b => b.addEventListener("click", () => { const m = machines[b.dataset.rap]; const r = m && m.report && rapFind(m.report.file, m.sim); if (r) rapOpenFiche(r.id); }));
+  document.querySelectorAll("[data-rap]").forEach(b => b.addEventListener("click", () => { const m = machines[b.dataset.rap]; const r = m && m.report && rapFind(m.report.file, m.sim); if (r) rapShow(r.id); }));
 }
 // Une ligne trop longue pour sa case (petit écran) est réduite jusqu'à tenir, au lieu d'être coupée par « … »
 function fitText(){
@@ -1004,6 +1006,12 @@ async function rapLoad(){
 function rapFind(file, sim){ return (rapIdx || []).find(r => r.f === file && !!r.sim === !!sim); }
 let rapWatchT = null;
 function rapWatch(){ if (rapWatchT || rapLoading) return; rapWatchT = setTimeout(async () => { rapWatchT = null; if (!document.hidden) { await rapLoad(); scheduleRender(); } }, rapIdx ? 10000 : 300); }
+// Un rapport s'ouvre directement sur son PDF (27/11/2026 : moins de clics, pas d'historique par défaut) ; l'historique de la
+// batterie reste accessible par la ligne « Historique de la batterie » sous l'en-tête, seulement s'il y a d'autres passages
+function rapShow(id){
+  const r = (rapIdx || []).find(x => x.id === id); if (!r) return;
+  if (r.pdf) openPdf(id); else rapOpenFiche(id);
+}
 function rapOpenFiche(id){ rapParc = id; rapScreen = "batt"; $("rapView").classList.remove("hidden"); rapDraw(); }
 function rapOpen(){ rapScreen = "list"; $("rapView").classList.remove("hidden"); rapDraw(); rapLoad(); }
 function rapClose(){ $("rapView").classList.add("hidden"); $("rapToast").classList.add("hidden"); rapNote.last = null; }
@@ -1049,7 +1057,7 @@ function rapListBody(){
   return h + '</div>';
 }
 function rapBindItems(v){
-  v.querySelectorAll(".ritem[data-id]").forEach(b => b.addEventListener("click", () => { rapParc = b.dataset.id; rapScreen = "batt"; rapDraw(); v.querySelector(".rlist") && (v.querySelector(".rlist").scrollTop = 0); }));
+  v.querySelectorAll(".ritem[data-id]").forEach(b => b.addEventListener("click", () => rapShow(b.dataset.id)));
 }
 let rapQT = null;
 function rapRefreshList(){ const b = $("rapBody"); if (!b) return rapDraw(); b.innerHTML = rapListBody(); rapBindItems($("rapView")); }
@@ -1095,7 +1103,7 @@ function rapDraw(){
 let rapToastT = null;
 function rapNote(t){
   const n = $("rapMsg"); if (n) n.textContent = "";
-  const el = $("rapToast"); if (!t || $("rapView").classList.contains("hidden")) { el.classList.add("hidden"); return; }
+  const el = $("rapToast"); if (!t || ($("rapView").classList.contains("hidden") && $("pdfView").classList.contains("hidden"))) { el.classList.add("hidden"); return; }
   if (t === rapNote.last) return; rapNote.last = t;
   el.textContent = t; el.className = /envoyé à/i.test(t) ? "ok" : /^⚠/.test(t) ? "bad" : "";
   clearTimeout(rapToastT);
@@ -1155,8 +1163,13 @@ function loadPdfLib(){
     sc.onload = () => { pdfLib = window.pdfjsLib; pdfLib.GlobalWorkerOptions.workerSrc = "pdfjs/pdf.worker.min.js"; ok(pdfLib); };
     sc.onerror = () => ko(new Error("lecteur PDF indisponible (pas d'Internet ?)")); document.head.appendChild(sc); });
 }
+let pdfId = null;
 async function openPdf(id){
   const r = (rapIdx || []).find(x => x.id === id); if (!r) return;
+  pdfId = id;
+  const n = r.pa ? (rapIdx || []).filter(x => sameParc(x.pa, r.pa) && !!x.sim === !!r.sim).length : 1;
+  $("pdfHist").textContent = "Historique de la batterie · " + n + " passages ›";
+  $("pdfHist").classList.toggle("hidden", n < 2);
   pdfName = r.f.replace(/\.csv$/i, ".pdf");
   $("pdfTitle").textContent = [r.ma, r.pa].filter(Boolean).join(" ") || pdfName;
   $("pdfPages").innerHTML = '<div class="rload" style="margin-top:25vh">Chargement du rapport…</div>';
@@ -1176,7 +1189,9 @@ async function openPdf(id){
     }
   } catch(e){ $("pdfPages").innerHTML = '<div class="rload" style="margin-top:25vh">⚠ '+esc(friendly(e.message))+'</div>'; }
 }
-$("pdfBack").addEventListener("click", () => { $("pdfView").classList.add("hidden"); $("pdfPages").innerHTML = ""; });
+$("pdfBack").addEventListener("click", () => { $("pdfView").classList.add("hidden"); $("pdfPages").innerHTML = ""; $("rapToast").classList.add("hidden"); });
+$("pdfMail").addEventListener("click", () => { if (pdfId) rapMail(pdfId); });
+$("pdfHist").addEventListener("click", () => { const id = pdfId; $("pdfView").classList.add("hidden"); $("pdfPages").innerHTML = ""; if (id) rapOpenFiche(id); });
 $("pdfShare").addEventListener("click", async () => {
   if (!pdfBlob) return;
   const file = new File([pdfBlob], pdfName, { type: "application/pdf" });
