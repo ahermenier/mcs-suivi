@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261127165525">
+<meta name="mcs-build" content="20261127193041">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261127165525') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261127193041') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -400,6 +400,7 @@ function stateStyle(m){
   const s = m.state || "";
   if (s === "En marche") return ["var(--ok)","var(--okSoft)","var(--ok)"];
   if (s === "En pause") return ["var(--warn)","var(--warnSoft)","var(--warn)"];
+  if (s.startsWith("Réveil")) return ["var(--blue)","#E7EEF7","var(--blue)"];
   if (s === "Terminé") return ["var(--ok)","var(--okSoft)","var(--ok)"];
   if (s.includes("erreur")) return ["var(--danger)","var(--dangerSoft)","var(--danger)"];
   if (s === "Hors ligne") return ["var(--warn)","var(--warnSoft)","var(--warn)"];
@@ -584,14 +585,22 @@ function ago(ms){ const m = Math.round(ms/60000); return m < 60 ? m + " min" : M
 function card(m, stale){
   const [fg, bg, dot] = stateStyle(m);
   const active = m.running || m.paused;
+  // Réveil puis Programme Auto (27/11/2026) : pendant la pause, « Arrêter » annule l'Auto prévu
+  const ch = m.chain, chPause = ch && ch.phase === "pause";
   const tabsShown = !$("tabs").classList.contains("hidden");
   let h = '<div class="card">';
   // Le nom est déjà dans l'onglet : la carte commence directement par l'état
   h += '<div class="row">';
   h += '<span class="state" style="color:'+fg+'"><span class="dot" style="background:'+dot+'"></span>'+esc(m.state)+(active && m.kind ? ' · '+esc(m.kind) : '')+'</span>'+freshTxt(m)+(m.sim && !tabsShown ? '<span class="simchip">SIMULATION</span>' : '')+'</div>';
+  if (ch) {
+    const bad = ch.phase === "failed" || ch.phase === "interrupted" || ch.wait;
+    let line = ch.line || "";
+    if (chPause && !ch.wait && ch.at) { const left = Math.max(0, ch.at - pcNow(m.key)); line = "Pause après le réveil · départ seul dans " + ago(left) + " · ne pas débrancher la batterie"; }
+    h += '<div class="res" style="border-left-color:'+(bad?'var(--warn)':'var(--blue)')+';background:'+(bad?'var(--warnSoft)':'#E7EEF7')+'"><div class="t">'+esc(ch.title||"")+'</div><div class="s">'+esc(line)+'</div></div>';
+  }
   const idp = [m.id ? '<b>'+esc(m.id)+'</b>' : '', m.ot ? 'OT N°'+esc(m.ot) : '', esc(m.battery||"")].filter(Boolean);
   if (idp.length) h += '<div class="idl">'+idp.join(' · ')+'</div>';
-  if (!active && m.finished) {
+  if (!active && m.finished && !chPause) {   // pause du réveil : le bloc bleu au-dessus suffit
     const ok = m.state === "Terminé", err = (m.state||"").includes("erreur");
     const c = ok ? "var(--ok)" : err ? "var(--danger)" : "var(--muted)";
     const b = ok ? "var(--okSoft)" : err ? "var(--dangerSoft)" : "#F2F2F2";
@@ -630,7 +639,7 @@ function card(m, stale){
   // Arrêter (cycle en cours) + icône mail à droite (envoi du rapport, 26/11/2026 : à la demande seulement, le PC envoie)
   // Un seul bouton, centré, même taille (26/11/2026) : « Arrêter » pendant le cycle, « Rapport » une fois le cycle fini
   // (ouvre la fiche de la batterie : PDF, historique, envoi par mail). Le PC copie le rapport quelques secondes après la fin.
-  if (active && !stale) h += '<div class="acts"><button class="stop" data-act="stop" data-key="'+esc(m.key)+'">Arrêter</button></div>';
+  if ((active || chPause) && !stale) h += '<div class="acts"><button class="stop" data-act="stop" data-key="'+esc(m.key)+'">'+(chPause ? 'Annuler l\'Auto' : 'Arrêter')+'</button></div>';
   else if (!active && m.finished && m.report && m.report.file) {
     const ready = rapFind(m.report.file, m.sim);
     h += '<div class="acts"><button class="rep" data-rap="'+esc(m.key)+'"'+(ready ? '' : ' disabled')+'>'+(ready ? 'Rapport' : 'Rapport en préparation…')+'</button></div>';
@@ -911,9 +920,11 @@ function askAction(key, act){
   $("mList").classList.add("hidden"); $("mGo").className = "go"; $("mGo").disabled = false;
   if (act === "mail") { askMail(m); return; }
   if (act !== "stop") return;
-  $("mTitle").textContent = "Arrêter " + m.name + " ?";
-  $("mText").textContent = "Le programme" + (m.id ? " de " + m.id : "") + " sera arrêté. Il ne pourra pas être relancé depuis le téléphone.";
-  $("mGo").textContent = "Arrêter";
+  const chP = m.chain && m.chain.phase === "pause" && !(m.running || m.paused);
+  $("mTitle").textContent = chP ? "Annuler le Programme Auto ?" : "Arrêter " + m.name + " ?";
+  $("mText").textContent = chP ? "Le Programme Auto prévu après le réveil ne sera pas lancé. Il ne pourra pas être relancé depuis le téléphone."
+    : "Le programme" + (m.id ? " de " + m.id : "") + " sera arrêté." + (m.chain && m.chain.phase === "wake" ? " Le Programme Auto prévu ensuite sera annulé." : "") + " Il ne pourra pas être relancé depuis le téléphone.";
+  $("mGo").textContent = chP ? "Annuler l'Auto" : "Arrêter";
   $("modal").classList.remove("hidden");
 }
 $("mCancel").addEventListener("click", () => { $("modal").classList.add("hidden"); modalCtx = null; });
