@@ -13,8 +13,11 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261127193041">
+<meta name="mcs-build" content="20261127205929">
 <script>
+// Seuils du PC (Paramètres › Seuils) : valeurs par défaut tant qu'ils ne sont pas lus
+let TH = { hg: 80, hr: 60, ht: 45 };
+
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
 (function(){
@@ -22,7 +25,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261127193041') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261127205929') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -409,6 +412,7 @@ function stateStyle(m){
 
 async function refresh(){
   try {
+    dbGet("config/seuils").then(t => { if (t && t.hg) { TH = { hg: +t.hg, hr: +t.hr, ht: +t.ht }; scheduleRender(); } }).catch(() => {});
     const data = await dbGet("state") || {};
     machines = data; netDown = false;
     noteRx(); render();
@@ -611,7 +615,7 @@ function card(m, stale){
   if (m.v != null) {
     h += '<div class="band"><div><div class="l">Tension</div><div class="v" style="color:var(--volt)">'+num(m.v,1)+'<small>V</small></div><div class="c">'+(active?'consigne '+num(m.setV,1):'&nbsp;')+'</div></div>';
     h += '<div><div class="l">Courant</div><div class="v" style="color:var(--amp)">'+num(m.a,1)+'<small>A</small></div><div class="c">'+(active?'consigne '+num(m.setA,1):'&nbsp;')+'</div></div>';
-    h += '<div><div class="l">Température</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+'<small>°C</small>')+'</div><div class="c'+(m.t>=45?' hot">température élevée':'">&nbsp;')+'</div></div></div>';   // comme le PC (27/11/2026) : à partir de 45 °C ; une seule sonde : « batterie » retiré (26/11/2026)
+    h += '<div><div class="l">Température</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+'<small>°C</small>')+'</div><div class="c'+(m.t>=TH.ht?' hot">température élevée':'">&nbsp;')+'</div></div></div>';   // comme le PC (27/11/2026) : à partir de 45 °C ; une seule sonde : « batterie » retiré (26/11/2026)
   }
   const hh = chartPts(m);
   h += '<div class="chartbox">' + (hh && hh.length > 1 ? '<canvas id="c_'+esc(m.key)+'"></canvas>' : '<div class="empty" style="margin-top:18%">'+(active ? 'La courbe apparaît à la première mesure du cycle' : 'Machine au repos')+'</div>') + '</div>';
@@ -1043,9 +1047,9 @@ function rapShow(id){
 function rapOpenFiche(id){ rapParc = id; rapScreen = "batt"; $("rapView").classList.remove("hidden"); rapDraw(); }
 function rapOpen(){ rapScreen = "list"; $("rapView").classList.remove("hidden"); rapDraw(); rapLoad(); }
 function rapClose(){ $("rapView").classList.add("hidden"); $("rapToast").classList.add("hidden"); rapNote.last = null; }
-// État de santé (26/11/2026) : vert ≥ 80 %, orange de 60 à 80 %, rouge sous 60 % (comme le rapport)
-const pcClass = r => r.pc == null ? "mu" : r.pc >= 80 ? "ok" : r.pc >= 60 ? "wn" : "bd";
-const pcVar = pc => pc >= 80 ? "ok" : pc >= 60 ? "warn" : "danger";
+// État de santé : vert / orange / rouge selon les seuils réglés sur le PC (Paramètres › Seuils, 27/11/2026 ; 80 et 60 % par défaut)
+const pcClass = r => r.pc == null ? "mu" : r.pc >= TH.hg ? "ok" : r.pc >= TH.hr ? "wn" : "bd";
+const pcVar = pc => pc >= TH.hg ? "ok" : pc >= TH.hr ? "warn" : "danger";
 const chev = '<svg class="chev" width="8" height="14" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>';
 function rapRowRight(r){
   if (r.it) return '<div class="r"><b class="mu">Interrompu</b></div>';
