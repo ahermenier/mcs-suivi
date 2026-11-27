@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261127234635">
+<meta name="mcs-build" content="20261128005449">
 <script>
 // Seuils du PC (Paramètres › Seuils) : valeurs par défaut tant qu'ils ne sont pas lus
 let TH = { hg: 80, hr: 60, ht: 45 };
@@ -25,7 +25,7 @@ let TH = { hg: 80, hr: 60, ht: 45 };
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261127234635') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261128005449') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -69,6 +69,7 @@ main{flex:1;min-height:0;display:flex;flex-direction:column}
 .idl{font-size:14.5px;color:#444;margin-top:5px}
 .idl b{color:var(--ink);font-weight:600}
 .res{border-left:4px solid;padding:7px 10px;margin-top:9px}
+.finl{font:500 13px var(--sans);color:var(--muted);margin-top:6px}.finl .hot{color:var(--danger);font-weight:600}
 .res .t{font-size:18px;font-weight:700}
 .res .s{font:400 13px var(--sans);color:var(--muted);margin-top:1px}
 .band{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-top:9px}
@@ -604,7 +605,12 @@ function card(m, stale){
   }
   const idp = [m.id ? '<b>'+esc(m.id)+'</b>' : '', m.ot ? 'OT N°'+esc(m.ot) : '', esc(m.battery||"")].filter(Boolean);
   if (idp.length) h += '<div class="idl">'+idp.join(' · ')+'</div>';
-  if (!active && m.finished && !chPause) {   // pause du réveil : le bloc bleu au-dessus suffit
+  const rk = !active && m.finished && !chPause ? m.rk : null;   // fin de cycle avec décharge : le résultat dans les grandes cases (28/11/2026)
+  if (rk) {
+    const dt = m.finished.split(" "), d = dt[0].slice(0, 5), hm = dt[1] || "";
+    const verb = m.state === "Terminé" ? "terminé" : (m.state||"").includes("erreur") ? "arrêté par une erreur machine" : "arrêté par l'opérateur";
+    h += '<div class="finl">'+verb+' le '+d+' à '+hm+(m.restV != null ? ' · repos '+num(m.restV,1)+' V' : '')+(m.t != null ? ' · <span'+(m.t>=TH.ht?' class="hot"':'')+'>'+m.t+' °C</span>' : '')+'</div>';
+  } else if (!active && m.finished && !chPause) {   // pause du réveil : le bloc bleu au-dessus suffit
     const ok = m.state === "Terminé", err = (m.state||"").includes("erreur");
     const c = ok ? "var(--ok)" : err ? "var(--danger)" : "var(--muted)";
     const b = ok ? "var(--okSoft)" : err ? "var(--dangerSoft)" : "#F2F2F2";
@@ -612,7 +618,11 @@ function card(m, stale){
     const rt = esc(m.result || m.state).replace(/^Autonomie (\S+(?: C5)?)/, 'Autonomie <span style="color:var(--amp)">$1</span>');
     h += '<div class="res" style="border-left-color:'+c+';background:'+b+'"><div class="t">'+rt+'</div><div class="s">'+esc(m.finishLine || ((m.kind||"Programme")+' '+(ok?'terminé':'arrêté')+' le '+m.finished.replace(' ',' à ')))+'</div></div>';
   }
-  if (m.v != null) {
+  if (rk) {
+    h += '<div class="band"><div><div class="l">Autonomie</div><div class="v" style="color:var(--amp)">'+esc(rk.au)+'</div><div class="c">'+(rk.real ? esc(rk.real) : '&nbsp;')+'</div></div>';
+    h += '<div><div class="l">Capacité résiduelle</div><div class="v">'+(rk.ah != null ? rk.ah+'<small>Ah</small>' : '–')+'</div><div class="c">'+(rk.nom != null ? 'sur '+rk.nom+' Ah' : '&nbsp;')+'</div></div>';
+    h += '<div><div class="l">État de santé</div><div class="v" style="color:var(--'+(rk.pc != null ? pcVar(rk.pc) : 'muted')+')">'+(rk.pc != null ? rk.pc+'<small>%</small>' : '–')+'</div><div class="c">&nbsp;</div></div></div>';
+  } else if (m.v != null) {
     h += '<div class="band"><div><div class="l">Tension</div><div class="v" style="color:var(--volt)">'+num(m.v,1)+'<small>V</small></div><div class="c">'+(active?'consigne '+num(m.setV,1):'&nbsp;')+'</div></div>';
     h += '<div><div class="l">Courant</div><div class="v" style="color:var(--amp)">'+num(m.a,1)+'<small>A</small></div><div class="c">'+(active?'consigne '+num(m.setA,1):'&nbsp;')+'</div></div>';
     h += '<div><div class="l">Température</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+'<small>°C</small>')+'</div><div class="c'+(m.t>=TH.ht?' hot">température élevée':'">&nbsp;')+'</div></div></div>';   // comme le PC (27/11/2026) : à partir de 45 °C ; une seule sonde : « batterie » retiré (26/11/2026)
