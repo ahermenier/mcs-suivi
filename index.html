@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261127125121">
+<meta name="mcs-build" content="20261127125402">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261127125121') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261127125402') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -199,6 +199,8 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
 #pdfView .ptop b{text-align:center;font-size:15px;line-height:32px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw}
 #pdfView .ptop .pacts{justify-self:end;display:inline-flex;align-items:center;gap:14px;height:32px}
 #pdfView .ptop .ml{border:0;background:none;color:var(--blue);padding:0 0 0 6px;height:32px;display:inline-flex;align-items:center;justify-content:flex-end}
+/* icônes alignées par le bas : bas du cadre du partage au niveau du bas de l'enveloppe (27/11/2026) */
+#pdfShare svg{transform:translateY(-2px)}
 #pdfHist{border:0;border-bottom:1px solid var(--rule);background:#fff;color:var(--blue);font:600 14px var(--sans);padding:9px 12px;text-align:left}
 #pdfView .ptop .share{border:0;background:none;color:var(--blue);padding:0 1px 0 6px;height:32px;display:inline-flex;align-items:center}
 #pdfPages{flex:1;overflow:auto;padding:10px 8px calc(10px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
