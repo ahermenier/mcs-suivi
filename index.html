@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <!-- Seuls les scripts de cette page s'exécutent : pas de bandeau publicitaire ajouté par l'hébergeur -->
 <meta http-equiv="Content-Security-Policy" content="script-src 'unsafe-inline' 'self'; worker-src 'self'">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261127063029">
+<meta name="mcs-build" content="20261127063729">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261127063029') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261127063729') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -75,7 +75,7 @@ main{flex:1;min-height:0;display:flex;flex-direction:column}
 .band .v{font:600 28px var(--mono);letter-spacing:0;line-height:1.15;white-space:nowrap}
 .band .v small{font:600 15px var(--sans);letter-spacing:0;margin-left:2px}
 .band .c{font:400 11.5px var(--mono);color:#777}
-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#fff;touch-action:pinch-zoom;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#fff;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .steps{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;margin-top:8px;align-items:stretch;border-top:1px solid var(--rule)}
 .step{min-width:0;display:flex;flex-direction:column;border-left:1px solid var(--line);position:relative}
 .step:first-child{border-left:0}
@@ -487,7 +487,7 @@ window.addEventListener("resize", () => scheduleRender());
 const live = {};
 // Zoomé (27/11/2026) : graphe détaillé (jusqu'à 3000 points, envoyé par le PC toutes les 60 s), lu seulement pendant le zoom
 let hdHists = {}, hdAt = {};
-const zoomedNow = () => !!(window.visualViewport && visualViewport.scale > 1.2);
+const zoomedNow = () => !!(tz[selected] && machines[selected]);
 async function loadHd(k){
   if (!k || (hdAt[k] && Date.now() - hdAt[k] < 55000)) return;
   hdAt[k] = Date.now();
@@ -646,6 +646,9 @@ function axisLabel(mn, mx, i, n, unit){
   const t = Math.abs(stepV - Math.round(stepV)) > 1e-6 || (mx - mn) < 8 ? num(v, 1) : num(v, 0);
   return i === 0 ? t + " " + unit : t;
 }
+// Zoom du TEMPS au pincement (27/11/2026) : seule l'échelle de temps change, la page ne s'agrandit pas.
+// tz[clé] = { v0, v1 } en heures ; absent = tout le cycle
+let tz = {};
 function drawChart(key, pts){
   const cv = document.getElementById("c_" + key); if (!cv || !pts || pts.length < 2) return;
   const m = machines[key] || {};
@@ -654,7 +657,8 @@ function drawChart(key, pts){
   const dpr = Math.min((window.devicePixelRatio || 1) * zoom, Math.sqrt(16e6 / Math.max(1, W * H)));
   cv.width = W*dpr; cv.height = H*dpr;
   const g = cv.getContext("2d"); g.scale(dpr, dpr);
-  const padR = 8, padT = 24, padB = 18, ph = H - padT - padB;
+  const zv0 = tz[key];
+  const padR = 8, padT = 24, padB = zv0 ? 32 : 18, ph = H - padT - padB;   // zoomé : barre de position sous les heures
   const sc = Array.isArray(m.sc) ? m.sc : null;
   // Marge gauche juste à la largeur des graduations (26/11/2026 : « serrer à gauche ») : plus de place pour les courbes
   const laneRange = (li, idx) => { if (sc) return [sc[li*2], sc[li*2+1]]; const vals = pts.map(p => p[idx]).filter(x => x != null); let mn = Math.min(...vals), mx = Math.max(...vals); if (mx - mn < 1) { mx += 1; mn -= 1; } return [mn, mx]; };
@@ -667,21 +671,35 @@ function drawChart(key, pts){
   const pw = W - padL - padR;
   const lastX = pts[pts.length-1][0];
   const xmax = Math.max(sc ? sc[6] : lastX, lastX, 1/60);
-  const X = t => padL + Math.min(t, xmax) / xmax * pw;
+  let zv = tz[key]; if (zv && zv.v1 > xmax) { const sp = zv.v1 - zv.v0; zv.v1 = xmax; zv.v0 = Math.max(0, xmax - sp); }
+  const v0 = zv ? zv.v0 : 0, v1 = zv ? zv.v1 : xmax;
+  const X = zv ? (t => padL + (t - v0) / (v1 - v0) * pw) : (t => padL + Math.min(t, xmax) / xmax * pw);
+  cv._view = { padL, pw, xmax, v0, v1 };
   const grid = "#ECECEC", MONO = "IBM Plex Sans Condensed, system-ui, sans-serif";
   // repères de temps (tracés avant les courbes pour ne pas les hachurer)
-  const step = niceStep(xmax); g.font = "400 10.5px " + MONO; g.fillStyle = "#666"; g.textBaseline = "alphabetic";
-  const every = Math.max(1, Math.ceil((xmax / step + 1) / 6));   // au plus 6 libellés sur un téléphone
+  const step = niceStep(v1 - v0); g.font = "400 10.5px " + MONO; g.fillStyle = "#666"; g.textBaseline = "alphabetic";
+  const every = Math.max(1, Math.ceil(((v1 - v0) / step + 1) / 6));   // au plus 6 libellés sur un téléphone
   // 3 mini-graphes (26/11/2026) : les traits verticaux s'arrêtent à chaque bande, rien dans les intervalles
   const bandsY = []; { const tw = LANES.reduce((a, l) => a + l[3], 0), av = 1 - GAP * (LANES.length - 1); let ps = 0;
     LANES.forEach(l => { const hg = av * l[3] / tw; bandsY.push([padT + ph * ps, padT + ph * (ps + hg)]); ps += hg + GAP; }); }
   const vline = (x) => bandsY.forEach(([t, b]) => { g.beginPath(); g.moveTo(x, t); g.lineTo(x, b); g.stroke(); });
   let k = 0;
-  for (let x = 0; x <= xmax + 1e-9; x += step, k++) {
+  for (let x = Math.ceil(v0 / step - 1e-9) * step; x <= v1 + 1e-9; x += step, k++) {
     const px = X(x);
     g.strokeStyle = grid; vline(px + 0.5);
-    if (k % every === 0) { g.textAlign = k === 0 ? "left" : "center"; g.fillText(hourLabel(x, step), px, H - 4); }
+    if (k % every === 0) { g.textAlign = px < padL + 10 ? "left" : px > W - padR - 14 ? "right" : "center"; g.fillText(hourLabel(Math.abs(x) < 1e-9 ? 0 : x, step), px, H - (zv ? 18 : 4)); }
   }
+  // Barre de position (zoomé) : tout le cycle en gris, partie affichée en bleu
+  if (zv) {
+    const zl = "×" + String(Math.round(xmax / (v1 - v0) * 10) / 10).replace(".", ",");
+    g.font = "600 10.5px " + MONO; const zlw = g.measureText(zl).width + 8;
+    const ty = H - 9, tw0 = pw - zlw;
+    g.fillStyle = "#1F5FA8"; g.textAlign = "right"; g.textBaseline = "middle"; g.fillText(zl, W - padR, ty + 0.5);
+    g.fillStyle = "#E7EBF0"; roundRect(g, padL, ty - 3, tw0, 6, 3); g.fill();
+    const a = padL + v0 / xmax * tw0, b = Math.max(a + 8, padL + v1 / xmax * tw0);
+    g.fillStyle = "rgba(31,95,168,.55)"; roundRect(g, Math.min(a, padL + tw0 - 8), ty - 4, b - a, 8, 4); g.fill();
+  }
+  const clipOn = () => { g.save(); g.beginPath(); g.rect(padL - 1, 0, pw + 2, H); g.clip(); };   // zoomé : courbes et étapes ne débordent pas du graphique
   // bandes
   const totalW = LANES.reduce((a, l) => a + l[3], 0), avail = 1 - GAP * (LANES.length - 1);
   let pos = 0; const pills = [], laneInfo = [];   // pastilles de valeur dessinées en dernier (par-dessus les séparateurs)
@@ -698,9 +716,9 @@ function drawChart(key, pts){
       g.fillStyle = col; g.fillText(axisLabel(mn, mx, i, n, unit), padL - 4, Math.min(Math.max(y, top + 6), bot - 6));   // reste dans sa bande : pas de chevauchement avec la bande voisine
     }
     const line = () => { g.beginPath(); let st = false; pts.forEach(p => { const v = p[idx]; if (v == null || isNaN(v)) return; const x = X(p[0]), y = Math.max(top, Math.min(bot, Y(v))); st ? g.lineTo(x, y) : g.moveTo(x, y); st = true; }); };
-    line(); g.strokeStyle = col; g.lineWidth = 1.6; g.lineJoin = "round"; g.stroke();
+    clipOn(); line(); g.strokeStyle = col; g.lineWidth = 1.6; g.lineJoin = "round"; g.stroke(); g.restore();
     const lv = [...pts].reverse().find(p => p[idx] != null);
-    if (lv) pills.push(() => {
+    if (lv && lv[0] >= v0 - 1e-9 && lv[0] <= v1 + 1e-9) pills.push(() => {
       const lab = (unit === "°C" ? Math.round(lv[idx]) : num(lv[idx], unit === "V" ? 1 : 0)) + " " + unit;
       g.font = "600 11px " + MONO; const tw = g.measureText(lab).width;
       const vy = Math.max(top, Math.min(bot, Y(lv[idx])));
@@ -723,22 +741,24 @@ function drawChart(key, pts){
   // étapes : séparateurs et pastilles
   const segs = []; let s0 = 0;
   for (let i = 1; i <= pts.length; i++) if (i === pts.length || pts[i][4] !== pts[s0][4]) { segs.push([pts[s0][0], i < pts.length ? pts[i][0] : pts[i-1][0], pts[s0][4]]); s0 = i; }
+  clipOn();
   g.setLineDash([3,3]); g.strokeStyle = "#8A94A3"; g.lineWidth = 1;
   segs.slice(1).forEach(sg => { const x = X(sg[0]); g.beginPath(); g.moveTo(x, padT - 4); g.lineTo(x, padT); g.stroke(); vline(x); });
   g.setLineDash([]);
   const info = m.steps || [];
   segs.forEach(sg => {
     if (!sg[2]) return;
-    const st = info.find(x => x.slot === sg[2]) || {}, x0 = X(sg[0]), x1 = X(sg[1]);
+    const st = info.find(x => x.slot === sg[2]) || {}, x0 = Math.max(padL, X(sg[0])), x1 = Math.min(padL + pw, X(sg[1]));
     if (x1 - x0 < 14) return;
     const cx = (x0 + x1) / 2, dis = st.dis;
     g.fillStyle = dis ? "#B86A28" : "#2F64A8"; g.font = "600 11px " + MONO; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(st.no || sg[2]), cx, 11.5);
   });
+  g.restore();
   pills.forEach(f => f());
   // Curseur (26/11/2026) : doigt posé ou glissé sur le graphique → ligne verticale, point et valeur sur chaque courbe, heure
   cv._cur = { padL, pw, xmax };
   if (cursor && cursor.key === key) {
-    const t = Math.max(0, Math.min(xmax, (cursor.x - padL) / pw * xmax));
+    const t = Math.max(0, Math.min(xmax, v0 + (cursor.x - padL) / pw * (v1 - v0)));
     let best = pts[0]; for (const p of pts) if (Math.abs(p[0] - t) < Math.abs(best[0] - t)) best = p;
     const cx = X(best[0]);
     // Zoomé : textes du curseur gardés à leur taille à l'écran, heure posée en haut de la partie VISIBLE du graphique
@@ -807,8 +827,38 @@ function cursorOff(delay){
   clearTimeout(cursorTimer);
   cursorTimer = setTimeout(() => { const k = cursor && cursor.key; cursor = null; $("curBar").classList.add("hidden"); if (k && machines[k]) drawChart(k, chartPts(machines[k])); }, delay);
 }
-// un doigt = curseur ; deux doigts = zoom normal (le curseur s'efface)
-document.addEventListener("touchstart", e => { const cv = e.target.closest && e.target.closest("canvas[id^='c_']"); if (cv && e.touches.length === 1) { touching = true; cursorAt(e, cv); } else { touching = false; if (cursor) cursorOff(0); } }, { passive: true });
+// Un doigt = curseur ; deux doigts = zoom du TEMPS seulement (27/11/2026), la page ne s'agrandit jamais.
+// Écarter = zoomer autour des doigts, glisser à deux doigts = se déplacer, resserrer jusqu'au bout ou toucher deux fois = cycle entier.
+let pinch = null, lastTap = 0;
+function pinchInfo(e, cv){
+  const r = cv.getBoundingClientRect(), a = e.touches[0], b = e.touches[1];
+  return { d: Math.max(20, Math.abs(a.clientX - b.clientX)), mx: (a.clientX + b.clientX) / 2 - r.left };
+}
+document.addEventListener("gesturestart", e => e.preventDefault());   // iPhone : pas d'agrandissement de la page
+document.addEventListener("touchstart", e => { const cv = e.target.closest && e.target.closest("canvas[id^='c_']");
+  if (cv && e.touches.length === 2 && cv._view) {
+    touching = true; if (cursor) { clearTimeout(cursorTimer); cursor = null; }
+    const vw = cv._view, pi = pinchInfo(e, cv), sp = vw.v1 - vw.v0;
+    pinch = { cv, key: cv.id.slice(2), d0: pi.d, sp0: sp, tMid: vw.v0 + (pi.mx - vw.padL) / vw.pw * sp };
+    return;
+  }
+  if (cv && e.touches.length === 1) {
+    const now = Date.now(), k = cv.id.slice(2);
+    if (now - lastTap < 300 && tz[k]) { delete tz[k]; lastTap = 0; cursor = null; touching = true; drawChart(k, chartPts(machines[k])); return; }
+    lastTap = now; touching = true; cursorAt(e, cv);
+  } else { touching = false; if (cursor) cursorOff(0); } }, { passive: true });
+document.addEventListener("touchmove", e => {
+  if (!pinch || e.touches.length !== 2) return;
+  e.preventDefault();
+  const vw = pinch.cv._view, pi = pinchInfo(e, pinch.cv), xmax = vw.xmax;
+  let sp = pinch.sp0 * pinch.d0 / pi.d;
+  sp = Math.max(Math.min(xmax, 10 / 60), sp);           // au plus près : 10 minutes sur la largeur
+  if (sp >= xmax * 0.97) delete tz[pinch.key];
+  else { let v0 = pinch.tMid - (pi.mx - vw.padL) / vw.pw * sp; v0 = Math.max(0, Math.min(xmax - sp, v0)); tz[pinch.key] = { v0, v1: v0 + sp }; }
+  lastTap = 0;
+  drawChart(pinch.key, chartPts(machines[pinch.key]));
+}, { passive: false });
+document.addEventListener("touchend", e => { if (pinch && e.touches.length < 2) { pinch = null; lastTap = 0; } }, { passive: true });
 const touchDone = () => { if (!touching) return; touching = false; if (renderWaiting) { renderWaiting = false; scheduleRender(); } };
 document.addEventListener("touchcancel", () => { touchDone(); if (cursor) cursorOff(4000); }, { passive: true });
 document.addEventListener("touchmove", e => { const cv = e.target.closest && e.target.closest("canvas[id^='c_']"); if (cv && e.touches.length === 1 && cursor) { e.preventDefault(); cursorAt(e, cv); } }, { passive: false });
