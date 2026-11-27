@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261127125722">
+<meta name="mcs-build" content="20261127132943">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261127125722') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261127132943') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -155,6 +155,7 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
 .rfil{display:flex;gap:6px;margin-bottom:6px}
 .rfil button{border:1px solid var(--line);background:#fff;border-radius:14px;height:28px;padding:0 11px;font:500 13.5px var(--sans);color:var(--muted)}
 .rfil button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.rfil button.sim{margin-left:auto}
 .rcount{font:400 12.5px var(--sans);color:var(--muted);margin:2px 0 4px}
 .rlist{flex:1;overflow:auto;margin:0 -12px;padding:0 12px}
 .rmon{font:600 11.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:12px 0 4px;border-bottom:1px solid var(--line)}
@@ -988,6 +989,10 @@ async function waitResult(key, at, n){
 
 // ================= Rapports (26/11/2026) : tous les rapports archivés par le PC dans Firebase, même PC éteint =================
 let rapIdx = null, rapQ = "", rapF = 0, rapLoading = false, rapScreen = "list", rapParc = null;
+// Rapports de simulation (27/11/2026) : masqués par défaut, bouton « Simulation » pour les afficher (choix retenu sur ce téléphone)
+let rapSim = store.get("rap_sim") === "1";
+const rapVis = () => (rapIdx || []).filter(r => rapSim || !r.sim);
+const rapHasSim = () => (rapIdx || []).some(r => r.sim);
 const MOIS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 const MOISC = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
 const normP = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -1029,7 +1034,7 @@ function rapRowRight(r){
   if (r.pc != null) return '<div class="r"><b class="'+pcClass(r)+'">'+r.pc+' %</b><span>'+esc((r.au || "") + (r.c5 ? " C5" : ""))+'</span></div>';
   return '<div class="r"><b class="mu">'+esc(r.mo || "—")+'</b></div>';
 }
-const rapMachines = () => ["Tous", ...[...new Set((rapIdx || []).map(r => r.mc).filter(Boolean))].sort()];
+const rapMachines = () => ["Tous", ...[...new Set(rapVis().map(r => r.mc).filter(Boolean))].sort()];
 function rapList(){
   const machinesTxt = rapMachines();
   // Le champ de recherche n'est construit qu'une fois : la frappe ne met à jour que la liste (26/11/2026 : sinon le clavier
@@ -1037,7 +1042,8 @@ function rapList(){
   return '<div class="rtop"><button class="back" data-r="close">‹ Retour</button><h2>Rapports</h2></div>'
     + '<div class="rsearch"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>'
     + '<input id="rapSearch" type="search" placeholder="N° parc, OT ou marque" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" value="'+esc(rapQ)+'"></div>'
-    + '<div class="rfil">'+machinesTxt.map((f, i) => '<button data-f="'+i+'" class="'+(i === rapF ? 'on' : '')+'">'+esc(f)+'</button>').join("")+'</div>'
+    + '<div class="rfil">'+machinesTxt.map((f, i) => '<button data-f="'+i+'" class="'+(i === rapF ? 'on' : '')+'">'+esc(f)+'</button>').join("")
+    + (rapHasSim() ? '<button id="rapSimBtn" class="sim'+(rapSim ? ' on' : '')+'">Simulation</button>' : '') + '</div>'
     + '<div id="rapBody">' + rapListBody() + '</div>';
 }
 function rapListBody(){
@@ -1045,8 +1051,8 @@ function rapListBody(){
   // Plusieurs mots (26/11/2026, « HC N12625 ») : chaque mot doit se trouver dans la marque, le N° de parc ou l'OT
   const words = rapQ.trim().toUpperCase().split(/\s+/).filter(Boolean);
   const hit = (r, w) => { const nw = normP(w); return (nw && (normP(r.pa).includes(nw) || normP(r.ot).includes(nw))) || String(r.ma || "").toUpperCase().includes(w) || (nw && normP(r.ma).includes(nw)); };
-  const rows = (rapIdx || []).filter(r => (rapF === 0 || r.mc === machinesTxt[rapF]) && words.every(w => hit(r, w)));
-  let h = '<div class="rcount">'+(rapLoading && !rapIdx ? "Chargement…" : (rapQ ? rows.length + ' rapport'+(rows.length > 1 ? 's' : '')+' pour « '+esc(rapQ)+' »' : (rapIdx || []).length.toLocaleString("fr-FR") + ' rapports') + ' · disponibles même PC éteint')+'</div>'
+  const rows = rapVis().filter(r => (rapF === 0 || r.mc === machinesTxt[rapF]) && words.every(w => hit(r, w)));
+  let h = '<div class="rcount">'+(rapLoading && !rapIdx ? "Chargement…" : (rapQ ? rows.length + ' rapport'+(rows.length > 1 ? 's' : '')+' pour « '+esc(rapQ)+' »' : rapVis().length.toLocaleString("fr-FR") + ' rapport' + (rapVis().length > 1 ? 's' : '')) + ' · disponibles même PC éteint')+'</div>'
     + '<div id="rapMsg"></div><div class="rlist">';
   if (!rapIdx && rapLoading) h += '<div class="rload">Chargement des rapports…</div>';
   else if (!rows.length) h += '<div class="rload">'+(rapQ ? 'Aucun rapport pour « '+esc(rapQ)+' »' : 'Aucun rapport archivé pour l\'instant.<br>Le PC les copie au fil de l\'eau (Paramètres › Rapports sur le téléphone).')+'</div>';
@@ -1096,6 +1102,7 @@ function rapDraw(){
   v.innerHTML = rapScreen === "batt" ? rapBatt() : rapList();
   v.querySelectorAll("[data-r]").forEach(b => b.addEventListener("click", () => { if (b.dataset.r === "close") rapClose(); else { rapScreen = "list"; rapDraw(); } }));
   v.querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => { rapF = +b.dataset.f; rapDraw(); }));
+  const sb = $("rapSimBtn"); if (sb) sb.addEventListener("click", () => { rapSim = !rapSim; store.set("rap_sim", rapSim ? "1" : null); rapF = 0; rapDraw(); });
   rapBindItems(v);
   v.querySelectorAll("[data-pdf]").forEach(b => b.addEventListener("click", () => openPdf(b.dataset.pdf)));
   v.querySelectorAll("[data-mail]").forEach(b => b.addEventListener("click", () => rapMail(b.dataset.mail)));
