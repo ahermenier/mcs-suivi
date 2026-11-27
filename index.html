@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261127124628">
+<meta name="mcs-build" content="20261127124816">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261127124628') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261127124816') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -199,7 +199,8 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
 #pdfView .ptop b{flex:1;text-align:center;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #pdfView .ptop .ml{border:0;background:none;color:var(--blue);padding:0 6px;height:28px;display:inline-flex;align-items:center}
 #pdfHist{border:0;border-bottom:1px solid var(--rule);background:#fff;color:var(--blue);font:600 14px var(--sans);padding:9px 12px;text-align:left}
-#pdfView .ptop .share{border:0;background:none;color:var(--blue);font:600 16px var(--sans);padding:0;height:28px}
+#pdfView .ptop .share{border:0;background:none;color:var(--blue);padding:0 4px 0 8px;height:30px;display:inline-flex;align-items:center}
+#pdfView .ptop .back{min-width:84px;text-align:left}
 #pdfPages{flex:1;overflow:auto;padding:10px 8px calc(10px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
 #pdfPages canvas{position:static;display:block;width:100%;height:auto;margin:0 auto 10px;box-shadow:0 1px 4px rgba(0,0,0,.15);background:#fff;touch-action:auto}
 .band>div{text-align:center}.band>div:first-child{padding-left:8px}
@@ -238,7 +239,7 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
 <div id="curBar" class="hidden"></div>
 <div id="rapView" class="hidden"></div>
 <div id="rapToast" class="hidden"></div>
-<div id="pdfView" class="hidden"><div class="ptop"><button class="back" id="pdfBack">‹ Retour</button><b id="pdfTitle"></b><button class="ml" id="pdfMail" aria-label="Envoyer le rapport par mail"><svg width="22" height="17" viewBox="0 0 18 14" aria-hidden="true"><rect x="1" y="1" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.8 2l7.2 5.6L16.2 2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><button class="share" id="pdfShare">Partager</button></div><button id="pdfHist" class="hidden"></button><div id="pdfPages"></div></div>
+<div id="pdfView" class="hidden"><div class="ptop"><button class="back" id="pdfBack">‹ Retour</button><b id="pdfTitle"></b><button class="ml" id="pdfMail" aria-label="Envoyer le rapport par mail"><svg width="22" height="17" viewBox="0 0 18 14" aria-hidden="true"><rect x="1" y="1" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.8 2l7.2 5.6L16.2 2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><button class="share" id="pdfShare" aria-label="Partager"><svg width="20" height="25" viewBox="0 0 20 25" aria-hidden="true"><path d="M10 1.5v14M5.5 6L10 1.5 14.5 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 9.5H4a1.5 1.5 0 0 0-1.5 1.5v10.5A1.5 1.5 0 0 0 4 23h12a1.5 1.5 0 0 0 1.5-1.5V11A1.5 1.5 0 0 0 16 9.5h-2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div><button id="pdfHist" class="hidden"></button><div id="pdfPages"></div></div>
 <div id="modal" class="modal hidden">
   <div class="sheet">
     <h2 id="mTitle">Arrêter</h2>
