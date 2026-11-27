@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261127223224">
+<meta name="mcs-build" content="20261127233610">
 <script>
 // Seuils du PC (Paramètres › Seuils) : valeurs par défaut tant qu'ils ne sont pas lus
 let TH = { hg: 80, hr: 60, ht: 45 };
@@ -25,7 +25,7 @@ let TH = { hg: 80, hr: 60, ht: 45 };
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261127223224') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261127233610') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -599,7 +599,7 @@ function card(m, stale){
   if (ch) {
     const bad = ch.phase === "failed" || ch.phase === "interrupted" || ch.wait;
     let line = ch.line || "";
-    if (chPause && !ch.wait && ch.at) { const left = Math.max(0, ch.at - pcNow(m.key)); line = "Pause après le réveil · départ seul dans " + ago(left) + " · ne pas débrancher la batterie"; }
+    if (chPause && !ch.wait && ch.at) { const left = Math.max(0, ch.at - pcNow(m.key)); line = "Pause après le réveil · départ seul dans " + (left < 60000 ? "moins d'une minute" : ago(left)) + " · ne pas débrancher la batterie"; }
     h += '<div class="res" style="border-left-color:'+(bad?'var(--warn)':'var(--blue)')+';background:'+(bad?'var(--warnSoft)':'#E7EEF7')+'"><div class="t">'+esc(ch.title||"")+'</div><div class="s">'+esc(line)+'</div></div>';
   }
   const idp = [m.id ? '<b>'+esc(m.id)+'</b>' : '', m.ot ? 'OT N°'+esc(m.ot) : '', esc(m.battery||"")].filter(Boolean);
