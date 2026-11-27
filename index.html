@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261127064118">
+<meta name="mcs-build" content="20261127070017">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261127064118') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261127070017') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -639,7 +639,7 @@ function niceStep(xmax){ const st=[10/3600,30/3600,1/60,2/60,5/60,0.25,0.5,1,2,4
 function hourLabel(x, step){
   if (step >= 1) return Math.round(x) + "h";
   if (step < 1/60) { const sec = Math.round(x*3600); return sec < 60 ? sec + "s" : sec % 60 === 0 ? (sec/60) + "min" : Math.floor(sec/60) + "min" + String(sec%60).padStart(2,"0"); }
-  const tm = Math.round(x*60); return tm < 60 ? tm + "min" : Math.floor(tm/60) + "h" + String(tm%60).padStart(2,"0");
+  const tm = Math.round(x*60); if (tm === 0 && step >= 0.25) return "0h00"; return tm < 60 ? tm + "min" : Math.floor(tm/60) + "h" + String(tm%60).padStart(2,"0");
 }
 function axisLabel(mn, mx, i, n, unit){
   const v = mx - (mx - mn) * i / n, stepV = (mx - mn) / n;
@@ -658,7 +658,7 @@ function drawChart(key, pts){
   cv.width = W*dpr; cv.height = H*dpr;
   const g = cv.getContext("2d"); g.scale(dpr, dpr);
   const zv0 = tz[key];
-  const padR = 8, padT = 24, padB = zv0 ? 32 : 18, ph = H - padT - padB;   // zoomé : barre de position sous les heures
+  const padR = 8, padT = 24, padB = zv0 ? 46 : 18, ph = H - padT - padB;   // zoomé : barre de position sous les heures
   const sc = Array.isArray(m.sc) ? m.sc : null;
   // Marge gauche juste à la largeur des graduations (26/11/2026 : « serrer à gauche ») : plus de place pour les courbes
   const laneRange = (li, idx) => { if (sc) return [sc[li*2], sc[li*2+1]]; const vals = pts.map(p => p[idx]).filter(x => x != null); let mn = Math.min(...vals), mx = Math.max(...vals); if (mx - mn < 1) { mx += 1; mn -= 1; } return [mn, mx]; };
@@ -687,18 +687,24 @@ function drawChart(key, pts){
   for (let x = Math.ceil(v0 / step - 1e-9) * step; x <= v1 + 1e-9; x += step, k++) {
     const px = X(x);
     g.strokeStyle = grid; vline(px + 0.5);
-    if (k % every === 0) { g.textAlign = px < padL + 10 ? "left" : px > W - padR - 14 ? "right" : "center"; g.fillText(hourLabel(Math.abs(x) < 1e-9 ? 0 : x, step), px, H - (zv ? 18 : 4)); }
+    if (k % every === 0) { g.textAlign = px < padL + 10 ? "left" : px > W - padR - 14 ? "right" : "center"; g.fillText(hourLabel(Math.abs(x) < 1e-9 ? 0 : x, step), px, H - (zv ? 32 : 4)); }
   }
-  // Barre de position (zoomé) : tout le cycle en gris, partie affichée en bleu
+  // Barre de position (zoomé) : tout le cycle en gris, partie affichée en bleu. Le doigt sur la barre déplace la vue
+  // (appui = saut à cet endroit, glisser = défilement rapide) ; bouton « 100 % » à droite = retour au cycle entier (27/11/2026)
   if (zv) {
     const zl = "×" + String(Math.round(xmax / (v1 - v0) * 10) / 10).replace(".", ",");
-    g.font = "600 10.5px " + MONO; const zlw = g.measureText(zl).width + 8;
-    const ty = H - 9, tw0 = pw - zlw;
-    g.fillStyle = "#1F5FA8"; g.textAlign = "right"; g.textBaseline = "middle"; g.fillText(zl, W - padR, ty + 0.5);
-    g.fillStyle = "#E7EBF0"; roundRect(g, padL, ty - 3, tw0, 6, 3); g.fill();
-    const a = padL + v0 / xmax * tw0, b = Math.max(a + 8, padL + v1 / xmax * tw0);
-    g.fillStyle = "rgba(31,95,168,.55)"; roundRect(g, Math.min(a, padL + tw0 - 8), ty - 4, b - a, 8, 4); g.fill();
-  }
+    g.font = "600 11px " + MONO;
+    const bt = "100 %", btw = g.measureText(bt).width + 16, bth = 22, btx = W - padR - btw, bty = H - 4 - bth;
+    g.font = "600 10.5px " + MONO; const zlw = g.measureText(zl).width + 10;
+    const ty = bty + bth / 2, tw0 = btx - 8 - zlw - padL;
+    g.fillStyle = "#E7EBF0"; roundRect(g, padL, ty - 4, tw0, 8, 4); g.fill();
+    const a = padL + v0 / xmax * tw0, b = Math.max(a + 14, padL + v1 / xmax * tw0);
+    g.fillStyle = "#1F5FA8"; roundRect(g, Math.min(a, padL + tw0 - 14), ty - 7, b - a, 14, 7); g.fill();
+    g.fillStyle = "#1F5FA8"; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(zl, padL + tw0 + 6, ty + 0.5);
+    g.strokeStyle = "#1F5FA8"; g.lineWidth = 1; g.fillStyle = "#fff"; roundRect(g, btx + 0.5, bty + 0.5, btw - 1, bth - 1, 4); g.fill(); g.stroke();
+    g.font = "600 11px " + MONO; g.fillStyle = "#1F5FA8"; g.textAlign = "center"; g.fillText(bt, btx + btw / 2, ty + 0.5);
+    cv._bar = { x0: padL, w: tw0, top: bty - 8, btx };
+  } else cv._bar = null;
   const clipOn = () => { g.save(); g.beginPath(); g.rect(padL - 1, 0, pw + 2, H); g.clip(); };   // zoomé : courbes et étapes ne débordent pas du graphique
   // bandes
   const totalW = LANES.reduce((a, l) => a + l[3], 0), avail = 1 - GAP * (LANES.length - 1);
@@ -829,7 +835,7 @@ function cursorOff(delay){
 }
 // Un doigt = curseur ; deux doigts = zoom du TEMPS seulement (27/11/2026), la page ne s'agrandit jamais.
 // Écarter = zoomer autour des doigts, glisser à deux doigts = se déplacer, resserrer jusqu'au bout ou toucher deux fois = cycle entier.
-let pinch = null, lastTap = 0;
+let pinch = null, lastTap = 0, barDrag = null;
 function pinchInfo(e, cv){
   const r = cv.getBoundingClientRect(), a = e.touches[0], b = e.touches[1];
   // écart entre les doigts dans tous les sens (27/11/2026) : écarter de haut en bas zoome aussi le temps
@@ -843,12 +849,28 @@ document.addEventListener("touchstart", e => { const cv = e.target.closest && e.
     pinch = { cv, key: cv.id.slice(2), d0: pi.d, sp0: sp, tMid: vw.v0 + (pi.mx - vw.padL) / vw.pw * sp };
     return;
   }
+  if (cv && e.touches.length === 1 && cv._bar && tz[cv.id.slice(2)]) {
+    const r = cv.getBoundingClientRect(), x = e.touches[0].clientX - r.left, y = e.touches[0].clientY - r.top, k = cv.id.slice(2), bar = cv._bar;
+    if (y >= bar.top) {
+      touching = true; if (cursor) { clearTimeout(cursorTimer); cursor = null; }
+      if (x >= bar.btx - 6) { delete tz[k]; barDrag = null; drawChart(k, chartPts(machines[k])); return; }
+      const vw = cv._view, sp = vw.v1 - vw.v0, a = bar.x0 + vw.v0 / vw.xmax * bar.w, b = bar.x0 + vw.v1 / vw.xmax * bar.w;
+      barDrag = { cv, key: k, off: x >= a - 8 && x <= b + 8 ? x - (a + b) / 2 : 0 };   // hors de la partie bleue : saut à cet endroit
+      barMove(x); return;
+    }
+  }
   if (cv && e.touches.length === 1) {
     const now = Date.now(), k = cv.id.slice(2);
     if (now - lastTap < 300 && tz[k]) { delete tz[k]; lastTap = 0; cursor = null; touching = true; drawChart(k, chartPts(machines[k])); return; }
     lastTap = now; touching = true; cursorAt(e, cv);
   } else { touching = false; if (cursor) cursorOff(0); } }, { passive: true });
+function barMove(x){
+  const d = barDrag, vw = d.cv._view, bar = d.cv._bar, sp = vw.v1 - vw.v0;
+  let mid = (x - d.off - bar.x0) / bar.w * vw.xmax, v0 = Math.max(0, Math.min(vw.xmax - sp, mid - sp / 2));
+  tz[d.key] = { v0, v1: v0 + sp }; drawChart(d.key, chartPts(machines[d.key]));
+}
 document.addEventListener("touchmove", e => {
+  if (barDrag && e.touches.length === 1) { e.preventDefault(); barMove(e.touches[0].clientX - barDrag.cv.getBoundingClientRect().left); return; }
   if (!pinch || e.touches.length !== 2) return;
   e.preventDefault();
   const vw = pinch.cv._view, pi = pinchInfo(e, pinch.cv), xmax = vw.xmax;
@@ -859,7 +881,7 @@ document.addEventListener("touchmove", e => {
   lastTap = 0;
   drawChart(pinch.key, chartPts(machines[pinch.key]));
 }, { passive: false });
-document.addEventListener("touchend", e => { if (pinch && e.touches.length < 2) { pinch = null; lastTap = 0; } }, { passive: true });
+document.addEventListener("touchend", e => { if (pinch && e.touches.length < 2) { pinch = null; lastTap = 0; } if (barDrag && !e.touches.length) { barDrag = null; lastTap = 0; } }, { passive: true });
 const touchDone = () => { if (!touching) return; touching = false; if (renderWaiting) { renderWaiting = false; scheduleRender(); } };
 document.addEventListener("touchcancel", () => { touchDone(); if (cursor) cursorOff(4000); }, { passive: true });
 document.addEventListener("touchmove", e => { const cv = e.target.closest && e.target.closest("canvas[id^='c_']"); if (cv && e.touches.length === 1 && cursor) { e.preventDefault(); cursorAt(e, cv); } }, { passive: false });
