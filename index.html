@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261126220847">
+<meta name="mcs-build" content="20261127063029">
 <script>
 // GitHub Pages garde la page 10 min en cache : à chaque ouverture, on relit la version en ligne (adresse unique = pas de cache)
 // et on recharge aussitôt si elle est plus récente. Les mises à jour arrivent ainsi dès la publication.
@@ -22,7 +22,7 @@
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261126220847') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261127063029') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -485,9 +485,20 @@ window.addEventListener("resize", () => scheduleRender());
 // Courbe = graphe du cycle en cours reçu du PC ({cycle, pts}) + mesures en direct (toutes les 5 s) ajoutées au bout.
 // Un graphe d'un autre cycle n'est jamais affiché : le n° de cycle doit être celui de l'état.
 const live = {};
+// Zoomé (27/11/2026) : graphe détaillé (jusqu'à 3000 points, envoyé par le PC toutes les 60 s), lu seulement pendant le zoom
+let hdHists = {}, hdAt = {};
+const zoomedNow = () => !!(window.visualViewport && visualViewport.scale > 1.2);
+async function loadHd(k){
+  if (!k || (hdAt[k] && Date.now() - hdAt[k] < 55000)) return;
+  hdAt[k] = Date.now();
+  try { const d = await dbGet("histhd/" + k); if (d && Array.isArray(d.pts)) { hdHists[k] = d; if (selected === k && machines[k]) drawChart(k, chartPts(machines[k])); } } catch(e){ hdAt[k] = 0; }
+}
 function chartPts(m){
   if (!m || !m.cycle) return null;
-  const k = m.key, hd = hists[k];
+  const k = m.key;
+  const hdz = zoomedNow() && hdHists[k] && hdHists[k].cycle === m.cycle && hdHists[k].pts.length > 1 ? hdHists[k] : null;
+  if (zoomedNow()) loadHd(k);
+  const hd = hdz || hists[k];
   const base = hd && hd.cycle === m.cycle && Array.isArray(hd.pts) ? hd.pts : [];
   const lv = live[k] && live[k].cycle === m.cycle ? live[k] : (live[k] = { cycle: m.cycle, pts: [] });
   const lastH = base.length ? base[base.length-1][0] : -1;
