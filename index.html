@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261127205929">
+<meta name="mcs-build" content="20261127223224">
 <script>
 // Seuils du PC (Paramètres › Seuils) : valeurs par défaut tant qu'ils ne sont pas lus
 let TH = { hg: 80, hr: 60, ht: 45 };
@@ -25,7 +25,7 @@ let TH = { hg: 80, hr: 60, ht: 45 };
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261127205929') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261127223224') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -1200,9 +1200,16 @@ function rapNote(t){
 // Envoi par mail d'un rapport archivé : mêmes destinataires que sur le PC, c'est le PC qui envoie (il doit être joignable)
 function rapMail(id){
   const r = (rapIdx || []).find(x => x.id === id); if (!r) return;
-  const key = Object.keys(machines).find(k => machines[k] && machines[k].report && machines[k].report.recips && machines[k].report.recips.length && !!machines[k].sim === r.sim);
-  if (!key || isStale(machines[key])) { rapShare(r); return; }   // PC injoignable : envoi depuis le téléphone (26/11/2026)
-  const base = machines[key].report, env = String(r.env || "").split(/\r?\n/).filter(Boolean).map(l => l.split("|"));
+  // Destinataires du PC : « mail » (toujours envoyé par le PC depuis le 27/11/2026), sinon ceux du journal en cours
+  const recipsOf = m => m && m.mail && m.mail.recips && m.mail.recips.length ? m.mail : m && m.report && m.report.recips && m.report.recips.length ? m.report : null;
+  const key = Object.keys(machines).find(k => recipsOf(machines[k]) && !!machines[k].sim === !!r.sim && !isStale(machines[k]));
+  if (!key) {
+    // PC injoignable : envoi depuis le téléphone (26/11/2026). Rapport de simulation alors que le PC est ouvert en mode
+    // atelier (ou l'inverse) : le PC est là, mais ce n'est pas lui qui a ce rapport → on le dit tel quel
+    const other = Object.keys(machines).some(k => machines[k] && !!machines[k].sim !== !!r.sim && !isStale(machines[k]));
+    rapShare(r, other ? (r.sim ? "MCS Studio n'est pas ouvert en simulation" : "MCS Studio est ouvert en simulation") : null); return;
+  }
+  const base = recipsOf(machines[key]), env = String(r.env || "").split(/\r?\n/).filter(Boolean).map(l => l.split("|"));
   const recips = base.recips.map(x => { const hit = env.filter(e => (e[1] || "").trim().toLowerCase() === String(x.mail).trim().toLowerCase()).pop();
     let last = null; if (hit) { const t = new Date(hit[0].replace(" ", "T")); if (!isNaN(t)) last = (w => w.charAt(0).toUpperCase() + w.slice(1))(t.toLocaleDateString("fr-FR", { weekday: "short" })) + " " + String(t.getDate()).padStart(2, "0") + "/" + String(t.getMonth() + 1).padStart(2, "0") + " " + String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0"); }
     return { ...x, last }; });
@@ -1213,14 +1220,14 @@ function rapMail(id){
 }
 // Envoi depuis le téléphone quand le PC n'est pas joignable : le PDF archivé est joint, le mail part de ce téléphone
 let shareFile = null, shareText = "";
-async function rapShare(r){
+async function rapShare(r, why){
   modalCtx = { key: null, act: "share", fromRap: true };
   shareFile = null;
   const who = [r.ma, r.pa].filter(Boolean).join(" ");
   const subj = ["Rapport Régénération", r.ma, r.pa, r.ot ? "OT N°" + r.ot : null].filter(Boolean).join(" ");
   shareText = "Bonjour,\n\nVeuillez trouver ci-joint le rapport de régénération de la batterie.\n\n\nCordialement.";
   $("mTitle").textContent = "Envoyer depuis le téléphone";
-  $("mText").textContent = "Le PC de l'atelier n'est pas joignable. Le rapport " + (who ? who + " " : "") + "partira de la messagerie de ce téléphone : choisissez Mail, puis le destinataire.";
+  $("mText").textContent = (why || "Le PC de l'atelier n'est pas joignable") + ". Le rapport " + (who ? who + " " : "") + "partira de la messagerie de ce téléphone : choisissez Mail, puis le destinataire.";
   $("mList").classList.add("hidden");
   $("mGo").textContent = "Préparation du PDF…"; $("mGo").className = "go neutral"; $("mGo").disabled = true;
   $("modal").classList.remove("hidden");
