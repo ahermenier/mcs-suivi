@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261128005449">
+<meta name="mcs-build" content="20261128171755">
 <script>
 // Seuils du PC (Paramètres › Seuils) : valeurs par défaut tant qu'ils ne sont pas lus
 let TH = { hg: 80, hr: 60, ht: 45 };
@@ -25,7 +25,7 @@ let TH = { hg: 80, hr: 60, ht: 45 };
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261128005449') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261128171755') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -60,10 +60,11 @@ main{flex:1;min-height:0;display:flex;flex-direction:column}
 .chartbox{flex:1;min-height:150px;margin-top:8px;position:relative}
 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .name{font-size:19px;font-weight:700}
-.dot{width:8px;height:8px;display:inline-block;flex:none}
-.state{display:flex;align-items:center;gap:7px;font:600 13.5px var(--sans);letter-spacing:.05em;text-transform:uppercase}
+.dot{width:8px;height:8px;display:inline-block;flex:none;border-radius:50%}
+/* 28/11/2026 : même pastille d'état que le PC (texte, couleurs, forme) */
+.state{display:inline-flex;align-items:center;font:600 14px var(--sans);padding:3px 10px;border-radius:3px}
 .simchip{font:500 11px var(--mono);letter-spacing:.06em;color:#8A5A00;border:1px solid #8A5A00;padding:0 5px}
-.fresh .live{display:inline-block;width:6px;height:6px;background:var(--ok);margin-right:5px;vertical-align:1px}
+.fresh .live{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-right:5px;vertical-align:1px}
 .fresh.bad{color:var(--warn);font-weight:600}.fresh.bad .live{background:var(--warn)}
 #list.old .band .v{opacity:.4}
 .idl{font-size:14.5px;color:#444;margin-top:5px}
@@ -89,15 +90,15 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background
 .step .box .sh{display:flex;align-items:center;gap:3px;font:600 13.5px var(--sans);color:var(--ink);margin-bottom:1px}
 .step .box .arr{flex:none}
 .step .box b{font-weight:600}.step .box .real{color:#7A6050;font-size:.92em}
-.step.next .box{color:#9A9A9A}.step.next .box .sh{color:#9A9A9A}
+.step.next .box{color:var(--muted)}.step.next .box .sh{color:var(--muted)}
 .step .bar{height:3px;border-radius:2px;background:#E3E6EA;margin:3px 4px 2px;overflow:hidden}
 .step .bar i{display:block;height:100%;background:var(--ok)}
 .times{display:flex;justify-content:space-between;font:400 13px var(--sans);color:#666;margin-top:0;padding-top:6px;border-top:1px solid var(--line);gap:8px;flex-wrap:wrap}
 .times b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
 .acts{display:flex;justify-content:center;margin-top:10px}
-.acts button{width:45%;max-width:180px;height:42px;border-radius:4px;font:600 17px var(--sans);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);background:var(--card);color:var(--text)}
-.acts .stop{background:var(--danger);border-color:var(--danger);color:#fff}
-.acts .rep{background:#fff;border-color:var(--blue);color:var(--blue)}
+.acts button{width:45%;max-width:180px;height:42px;border-radius:4px;font:600 16px var(--sans);border:1px solid var(--rule);background:#F7F8FA;color:var(--text)}
+.acts .stop{background:var(--dangerSoft);border-color:#E9B4AE;color:var(--danger)}   /* comme « Arrêter… » du PC */
+.acts .rep{background:#F7F8FA;border-color:var(--rule);color:var(--text)}
 .acts .rep:disabled{border-color:var(--line);color:var(--muted);letter-spacing:0;text-transform:none;font-size:14px;font-weight:500}
 .acts{gap:10px}
 .acts .mail{width:42px;max-width:none;flex:none;padding:0;border-color:var(--blue);color:var(--blue);background:#fff;display:inline-flex;align-items:center;justify-content:center}
@@ -157,8 +158,8 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
 .rsearch input{height:42px;padding-left:36px;font-size:16px;border-radius:4px}
 .rsearch svg{position:absolute;left:11px;top:12px;color:var(--muted)}
 .rfil{display:flex;gap:6px;margin-bottom:6px}
-.rfil button{border:1px solid var(--line);background:#fff;border-radius:14px;height:28px;padding:0 11px;font:500 13.5px var(--sans);color:var(--muted)}
-.rfil button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.rfil button{border:1px solid var(--rule);background:#F7F8FA;border-radius:4px;height:32px;padding:0 11px;font:500 13.5px var(--sans);color:var(--text)}
+.rfil button.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .rfil button.sim{margin-left:auto}
 .rcount{font:400 12.5px var(--sans);color:var(--muted);margin:2px 0 4px}
 .rlist{flex:1;overflow:auto;margin:0 -12px;padding:0 12px}
@@ -402,12 +403,13 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const num = (x, d) => x == null ? "–" : Number(x).toLocaleString("fr-FR", { minimumFractionDigits:d, maximumFractionDigits:d });
 function stateStyle(m){
   const s = m.state || "";
-  if (s === "En marche") return ["var(--ok)","var(--okSoft)","var(--ok)"];
+  if (s === "En marche") return ["var(--blue)","#E7EEF7","var(--blue)"];   // PC : pastille bleue pendant un cycle
   if (s === "En pause") return ["var(--warn)","var(--warnSoft)","var(--warn)"];
   if (s.startsWith("Réveil")) return ["var(--blue)","#E7EEF7","var(--blue)"];
   if (s === "Terminé") return ["var(--ok)","var(--okSoft)","var(--ok)"];
   if (s.includes("erreur")) return ["var(--danger)","var(--dangerSoft)","var(--danger)"];
   if (s === "Hors ligne") return ["var(--warn)","var(--warnSoft)","var(--warn)"];
+  if (s === "Au repos") return ["var(--ok)","var(--okSoft)","var(--ok)"];
   return ["var(--muted)","#EEF1F5","var(--muted)"];
 }
 
@@ -455,7 +457,7 @@ function render(){
   tabs.classList.toggle("hidden", keys.length < 2);
   tabs.classList.toggle("many", keys.length > 2);
   tabs.innerHTML = keys.map(k => {
-    const m = machines[k], dot = stateStyle(m)[2];
+    const m = machines[k], dot = notLive(m) ? 'var(--warn)' : 'var(--ok)';   // comme le point du PC : liaison, pas l'état
     const short = (m.name || k).replace(/ · simulateur$/, "").replace(/^MCS /, "");
     return '<button data-sel="'+esc(k)+'" class="'+(k===selected?'on':'')+'"><span class="dot" style="background:'+dot+'"></span>'+(keys.length > 2 ? '' : 'MCS ')+esc(short)+(m.sim?' <span class="sim">SIM</span>':'')+'</button>';
   }).join("");
@@ -596,7 +598,9 @@ function card(m, stale){
   let h = '<div class="card">';
   // Le nom est déjà dans l'onglet : la carte commence directement par l'état
   h += '<div class="row">';
-  h += '<span class="state" style="color:'+fg+'"><span class="dot" style="background:'+dot+'"></span>'+esc(m.state)+(active && m.kind ? ' · '+esc(m.kind) : '')+'</span>'+freshTxt(m)+(m.sim && !tabsShown ? '<span class="simchip">SIMULATION</span>' : '')+'</div>';
+  // Même texte que la pastille du PC : le type de cycle pendant la marche (« Programme Auto »), sinon l'état
+  const pill = m.running && !m.paused && m.kind ? m.kind : m.state;
+  h += '<span class="state" style="color:'+fg+';background:'+bg+'">'+esc(pill)+'</span>'+freshTxt(m)+(m.sim && !tabsShown ? '<span class="simchip">SIMULATION</span>' : '')+'</div>';
   if (ch) {
     const bad = ch.phase === "failed" || ch.phase === "interrupted" || ch.wait;
     let line = ch.line || "";
@@ -620,12 +624,12 @@ function card(m, stale){
   }
   if (rk) {
     h += '<div class="band"><div><div class="l">Autonomie</div><div class="v" style="color:var(--amp)">'+esc(rk.au)+'</div><div class="c">'+(rk.real ? esc(rk.real) : '&nbsp;')+'</div></div>';
-    h += '<div><div class="l">Capacité résiduelle</div><div class="v">'+(rk.ah != null ? rk.ah+'<small>Ah</small>' : '–')+'</div><div class="c">'+(rk.nom != null ? 'sur '+rk.nom+' Ah' : '&nbsp;')+'</div></div>';
-    h += '<div><div class="l">État de santé</div><div class="v" style="color:var(--'+(rk.pc != null ? pcVar(rk.pc) : 'muted')+')">'+(rk.pc != null ? rk.pc+'<small>%</small>' : '–')+'</div><div class="c">&nbsp;</div></div></div>';
+    h += '<div><div class="l">Capacité résiduelle</div><div class="v">'+(rk.ah != null ? rk.ah+'\u00A0Ah' : '–')+'</div><div class="c">'+(rk.nom != null ? 'sur '+rk.nom+' Ah' : '&nbsp;')+'</div></div>';
+    h += '<div><div class="l">État de santé</div><div class="v" style="color:var(--'+(rk.pc != null ? pcVar(rk.pc) : 'muted')+')">'+(rk.pc != null ? rk.pc+'\u00A0%' : '–')+'</div><div class="c">&nbsp;</div></div></div>';
   } else if (m.v != null) {
-    h += '<div class="band"><div><div class="l">Tension</div><div class="v" style="color:var(--volt)">'+num(m.v,1)+'<small>V</small></div><div class="c">'+(active?'consigne '+num(m.setV,1):'&nbsp;')+'</div></div>';
-    h += '<div><div class="l">Courant</div><div class="v" style="color:var(--amp)">'+num(m.a,1)+'<small>A</small></div><div class="c">'+(active?'consigne '+num(m.setA,1):'&nbsp;')+'</div></div>';
-    h += '<div><div class="l">Température</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+'<small>°C</small>')+'</div><div class="c'+(m.t>=TH.ht?' hot">température élevée':'">&nbsp;')+'</div></div></div>';   // comme le PC (27/11/2026) : à partir de 45 °C ; une seule sonde : « batterie » retiré (26/11/2026)
+    h += '<div class="band"><div><div class="l">Tension</div><div class="v" style="color:var(--volt)">'+num(m.v,1)+'\u00A0V</div><div class="c">'+(active?'consigne '+num(m.setV,1)+'\u00A0V':'&nbsp;')+'</div></div>';
+    h += '<div><div class="l">Courant</div><div class="v" style="color:var(--amp)">'+num(m.a,1)+'\u00A0A</div><div class="c">'+(active?'consigne '+num(m.setA,1)+'\u00A0A':'&nbsp;')+'</div></div>';
+    h += '<div><div class="l">Température</div><div class="v" style="color:var(--temp)">'+(m.t==null?'–':(m.t>0?'+':'')+m.t+'\u00A0°C')+'</div><div class="c'+(m.t>=TH.ht?' hot">température élevée':'">&nbsp;')+'</div></div></div>';   // comme le PC (27/11/2026) : à partir de 45 °C ; une seule sonde : « batterie » retiré (26/11/2026)
   }
   const hh = chartPts(m);
   h += '<div class="chartbox">' + (hh && hh.length > 1 ? '<canvas id="c_'+esc(m.key)+'"></canvas>' : '<div class="empty" style="margin-top:18%">'+(active ? 'La courbe apparaît à la première mesure du cycle' : 'Machine au repos')+'</div>') + '</div>';
@@ -646,17 +650,17 @@ function card(m, stale){
   }
   if (m.start) {
     h += '<div class="times"><span>Début <b>'+esc(m.start)+'</b></span>';
-    if (m.elapsed) h += '<span>'+(active?'Écoulé':'Durée')+' <b>'+esc(m.elapsed)+'</b></span>';
+    if (m.elapsed) h += '<span>'+(active?'Cycle':'Durée')+' <b>'+esc(m.elapsed)+'</b></span>';
     if (active && m.end) h += '<span>Fin estimée <b>'+esc(m.end)+'</b></span>';
     h += '</div>';
   }
   // Arrêter (cycle en cours) + icône mail à droite (envoi du rapport, 26/11/2026 : à la demande seulement, le PC envoie)
   // Un seul bouton, centré, même taille (26/11/2026) : « Arrêter » pendant le cycle, « Rapport » une fois le cycle fini
   // (ouvre la fiche de la batterie : PDF, historique, envoi par mail). Le PC copie le rapport quelques secondes après la fin.
-  if ((active || chPause) && !stale) h += '<div class="acts"><button class="stop" data-act="stop" data-key="'+esc(m.key)+'">'+(chPause ? 'Annuler l\'Auto' : 'Arrêter')+'</button></div>';
+  if ((active || chPause) && !stale) h += '<div class="acts"><button class="stop" data-act="stop" data-key="'+esc(m.key)+'">'+(chPause ? 'Annuler l\'Auto…' : 'Arrêter…')+'</button></div>';
   else if (!active && m.finished && m.report && m.report.file) {
     const ready = rapFind(m.report.file, m.sim);
-    h += '<div class="acts"><button class="rep" data-rap="'+esc(m.key)+'"'+(ready ? '' : ' disabled')+'>'+(ready ? 'Rapport' : 'Rapport en préparation…')+'</button></div>';
+    h += '<div class="acts"><button class="rep" data-rap="'+esc(m.key)+'"'+(ready ? '' : ' disabled')+'>'+(ready ? 'Voir le rapport' : 'Rapport en préparation…')+'</button></div>';
     if (!ready) rapWatch();
   }
   if (stale && m.sim) h += '<div class="note">Simulateur fermé · dernières valeurs reçues il y a '+ago(rxAge(m))+'.</div>';
@@ -853,7 +857,7 @@ function curBarShow(on, best, m, lanes){
   const bar = $("curBar"), vv = window.visualViewport;
   if (!on || !best || !vv) { bar.classList.add("hidden"); return; }
   bar.innerHTML = '<div class="t">' + curTimeText(m, best[0]) + '</div><div class="vals">' + lanes.map(l => { const v = best[l.idx]; if (v == null || isNaN(v)) return "";
-    return '<span style="color:' + l.col + '">' + (l.unit === "°C" ? Math.round(v) : num(v, l.unit === "V" ? 1 : 0)) + '<small>' + l.unit + '</small></span>'; }).join("") + '</div>';
+    return '<span style="color:' + l.col + '">' + (l.unit === "°C" ? Math.round(v) : num(v, l.unit === "V" ? 1 : 0)) + '\u00A0' + l.unit + '</span>'; }).join("") + '</div>';
   bar.style.width = (vv.width * vv.scale) + "px";
   bar.style.transform = "translate(" + vv.pageLeft + "px," + vv.pageTop + "px) scale(" + (1 / vv.scale) + ")";
   bar.classList.remove("hidden");
