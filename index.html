@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261128181412">
+<meta name="mcs-build" content="20261128183933">
 <script>
 // Seuils du PC (Paramètres › Seuils) : valeurs par défaut tant qu'ils ne sont pas lus
 let TH = { hg: 80, hr: 60, ht: 45 };
@@ -25,7 +25,7 @@ let TH = { hg: 80, hr: 60, ht: 45 };
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261128181412') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261128183933') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -563,7 +563,8 @@ function freshTxt(m){
   if (Date.now() - pageStart < LIVE_MS && !rxAt[m.key]) return '<span class="fresh">connexion…</span>';
   if (age > LIVE_MS) return '<span class="fresh bad"><span class="live"></span>reçu il y a ' + (age < 60000 ? Math.round(age/1000) + ' s' : ago(age)) + '</span>';
   const la = linkAge(m);
-  if ((m.running || m.paused) && la > 15000) return '<span class="fresh bad"><span class="live"></span>machine muette ' + (la < 60000 ? Math.round(la/1000) + ' s' : ago(la)) + '</span>';
+  // 28/11/2026 : « machine muette depuis 07:40 » (une heure, sans ambiguïté avec une durée) ; la veille ou avant : « depuis ven. 07:40 »
+  if ((m.running || m.paused) && la > 15000) return '<span class="fresh bad"><span class="live"></span>machine muette depuis ' + (la < 60000 ? Math.round(la/1000) + ' s' : since(Date.now() - la)) + '</span>';
   return '<span class="fresh"><span class="live"></span>en direct</span>';
 }
 // Toutes les secondes : texte de fraîcheur à jour ; carte redessinée quand l'état bascule (boutons, bandeau)
@@ -587,6 +588,10 @@ if (window.visualViewport) visualViewport.addEventListener("resize", () => {
 });
 window.addEventListener("offline", () => { netDown = true; scheduleRender(); });
 window.addEventListener("online", () => { netDown = false; if (timer) { openStream(); refresh(); loadHist(); } scheduleRender(); });
+function since(t){
+  const d = new Date(t), n = new Date(), hm = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+  return d.toDateString() === n.toDateString() ? hm : d.toLocaleDateString("fr-FR", { weekday: "short" }).replace(".", "") + ". " + hm;
+}
 function ago(ms){ const m = Math.round(ms/60000); return m < 60 ? m + " min" : Math.floor(m/60) + "h" + String(m%60).padStart(2,"0"); }
 
 function card(m, stale){
