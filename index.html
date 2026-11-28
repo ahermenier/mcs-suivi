@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>MCS Suivi</title>
-<meta name="mcs-build" content="20261128171755">
+<meta name="mcs-build" content="20261128180425">
 <script>
 // Seuils du PC (Paramètres › Seuils) : valeurs par défaut tant qu'ils ne sont pas lus
 let TH = { hg: 80, hr: 60, ht: 45 };
@@ -25,7 +25,7 @@ let TH = { hg: 80, hr: 60, ht: 45 };
     var mine = document.querySelector('meta[name="mcs-build"]').content;
     fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
       var m = t.match(/name="mcs-build" content="([^"]+)"/);
-      if (m && m[1] !== mine && m[1] !== '20261128171755') location.replace(location.pathname + '?b=' + m[1]);
+      if (m && m[1] !== mine && m[1] !== '20261128180425') location.replace(location.pathname + '?b=' + m[1]);
     }).catch(function(){});
   } catch(e) {}
 })();
@@ -97,7 +97,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background
 .times b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
 .acts{display:flex;justify-content:center;margin-top:10px}
 .acts button{width:45%;max-width:180px;height:42px;border-radius:4px;font:600 16px var(--sans);border:1px solid var(--rule);background:#F7F8FA;color:var(--text)}
-.acts .stop{background:var(--dangerSoft);border-color:#E9B4AE;color:var(--danger)}   /* comme « Arrêter… » du PC */
+.acts .stop{background:#fff;border-color:var(--danger);color:var(--danger)}   /* 28/11 : contour rouge = ouvre la question ; rouge plein = confirme (comme le PC) */
 .acts .rep{background:#F7F8FA;border-color:var(--rule);color:var(--text)}
 .acts .rep:disabled{border-color:var(--line);color:var(--muted);letter-spacing:0;text-transform:none;font-size:14px;font-weight:500}
 .acts{gap:10px}
@@ -126,7 +126,7 @@ input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 .sheet p{margin:0 0 10px;color:var(--muted);font-size:14.5px}
 .pin{letter-spacing:12px;text-align:center;font-size:26px;font-weight:700}
 .sheet .row2{display:flex;gap:8px;margin-top:14px}
-.sheet .row2 button{flex:1;height:48px;border-radius:4px;font:600 17px var(--sans);border:1px solid #C3C9D2;background:#fff;color:var(--ink)}
+.sheet .row2 button{flex:1;height:48px;border-radius:4px;font:600 17px var(--sans);border:1px solid var(--rule);background:#F7F8FA;color:var(--ink)}   /* « Annuler » comme le PC */
 .sheet .row2 .go{background:var(--danger);border-color:var(--danger);color:#fff}
 .sheet .row2 .go.neutral{background:var(--blue);border-color:var(--blue)}
 .hidden{display:none!important}
